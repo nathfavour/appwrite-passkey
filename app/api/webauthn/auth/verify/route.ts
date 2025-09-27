@@ -34,6 +34,14 @@ export async function POST(req: Request) {
     const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
     const origin = process.env.NEXT_PUBLIC_ORIGIN || `http://${rpID}:3000`;
 
+    // Basic shape validation before library call
+    if (typeof assertion !== 'object' || !assertion) {
+      return NextResponse.json({ error: 'Malformed assertion: not an object' }, { status: 400 });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(assertion as any).response || !(assertion as any).response.clientDataJSON) {
+      return NextResponse.json({ error: 'Malformed assertion: missing response.clientDataJSON' }, { status: 400 });
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const verification = await (verifyAuthenticationResponse as any)({
       credential: assertion,

@@ -80,6 +80,11 @@ export default function LoginPage() {
       }
 
       const cred = await navigator.credentials.create({ publicKey });
+      if (!cred) throw new Error('Credential creation returned null');
+      if (!(cred as any).response || !(cred as any).response.clientDataJSON) {
+        console.warn('Unexpected credential object', cred);
+        throw new Error('Browser did not return a proper attestation response');
+      }
       const json = publicKeyCredentialToJSON(cred);
 
       const verifyRes = await fetch('/api/webauthn/register/verify', {

@@ -30,6 +30,14 @@ export async function POST(req: Request) {
     const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
     const origin = process.env.NEXT_PUBLIC_ORIGIN || `http://${rpID}:3000`;
 
+    // Basic shape validation before library call
+    if (typeof attestation !== 'object' || !attestation) {
+      return NextResponse.json({ error: 'Malformed attestation: not an object' }, { status: 400 });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(attestation as any).response || !(attestation as any).response.clientDataJSON) {
+      return NextResponse.json({ error: 'Malformed attestation: missing response.clientDataJSON' }, { status: 400 });
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const verification = await (verifyRegistrationResponse as any)({
       credential: attestation,
