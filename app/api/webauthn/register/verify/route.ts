@@ -49,18 +49,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Malformed attestation', detail: shapeErrors }, { status: 400 });
     }
 
-    // Reconstruct minimal credential object expected by simplewebauthn
-    // Decode base64url -> Buffer for binary fields
-    function b64urlToBuf(v: string) {
-      try { return Buffer.from(v, 'base64url'); } catch { return Buffer.from(''); }
-    }
+    // Reconstruct minimal credential object expected by simplewebauthn.
+    // Pass base64url string fields as received; library will handle decoding.
     const credential = {
       id: att.id,
-      rawId: b64urlToBuf(att.rawId),
+      rawId: att.rawId,
       type: att.type,
       response: {
-        clientDataJSON: b64urlToBuf(att.response.clientDataJSON),
-        attestationObject: b64urlToBuf(att.response.attestationObject),
+        clientDataJSON: att.response.clientDataJSON,
+        attestationObject: att.response.attestationObject,
       },
       clientExtensionResults: att.clientExtensionResults || {},
     };
@@ -76,11 +73,12 @@ export async function POST(req: Request) {
         expectedRPID: rpID,
       });
     } catch (libErr) {
-      return NextResponse.json({ error: 'WebAuthn library verification threw', detail: (libErr as Error).message, ...(debug ? { credentialShape: Object.keys(credential), responseKeys: Object.keys(credential.response || {}), idLength: credential.id?.length } : {}) }, { status: 400 });
+      const msg = (libErr as Error).message || String(libErr);
+      return NextResponse.json({ error: 'WebAuthn library verification threw', detail: msg, ...(debug ? { credentialShape: Object.keys(credential), responseKeys: Object.keys(credential.response || {}), idLength: credential.id?.length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: challenge.slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
     if (!verification?.verified) {
-      return NextResponse.json({ error: 'Registration verification failed', detail: verification, ...(debug ? { idLen: (credential.id||'').length, rawIdType: typeof credential.rawId, rawIdBytes: (credential.rawId as Buffer)?.length } : {}) }, { status: 400 });
+      return NextResponse.json({ error: 'Registration verification failed', detail: verification, ...(debug ? { idLen: (credential.id||'').length, rawIdType: typeof credential.rawId, rawIdLen: (credential.rawId||'').length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: challenge.slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
     const registrationInfo = verification.registrationInfo;
