@@ -31,8 +31,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
-    const origin = process.env.NEXT_PUBLIC_ORIGIN || `http://${rpID}:3000`;
+    // Derive expected RP ID and Origin dynamically from request headers, with env overrides
+    const url = new URL(req.url);
+    const forwardedProto = req.headers.get('x-forwarded-proto');
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const hostHeader = forwardedHost || req.headers.get('host') || url.host;
+    const protocol = (forwardedProto || url.protocol.replace(':', '')).toLowerCase();
+    const hostNoPort = hostHeader.split(':')[0];
+    const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
+    const origin = process.env.NEXT_PUBLIC_ORIGIN || `${protocol}://${hostHeader}`;
 
     // Shape & type validation + reconstruction to avoid prototype issues
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,15 +73,16 @@ export async function POST(req: Request) {
 
     let verification: any;
     try {
-      verification = await (verifyRegistrationResponse as any)({
-        credential,
+      verification = await verifyRegistrationResponse({
+        // Pass the original attestation object as received from browser JSON
+        response: attestation,
         expectedChallenge: challenge,
         expectedOrigin: origin,
         expectedRPID: rpID,
       });
     } catch (libErr) {
       const msg = (libErr as Error).message || String(libErr);
-      return NextResponse.json({ error: 'WebAuthn library verification threw', detail: msg, ...(debug ? { credentialShape: Object.keys(credential), responseKeys: Object.keys(credential.response || {}), idLength: credential.id?.length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: challenge.slice(0,8)+'...' } : {}) }, { status: 400 });
+      return NextResponse.json({ error: 'WebAuthn library verification threw', detail: msg, ...(debug ? { attestationShape: Object.keys(attestation || {}), responseKeys: attestation?.response ? Object.keys(attestation.response) : [], idLength: attestation?.id?.length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: String(challenge).slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
     if (!verification?.verified) {

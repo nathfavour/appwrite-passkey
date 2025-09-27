@@ -11,7 +11,12 @@ export async function POST(req: Request) {
     const userId = String(rawUserId).trim().toLowerCase();
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
+    // Prefer dynamic RP based on host header for dev/proxy environments
+    const url = new URL(req.url);
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const hostHeader = forwardedHost || req.headers.get('host') || url.host;
+    const hostNoPort = hostHeader.split(':')[0];
+    const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
 
     // Rate limiting (authentication options)
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';

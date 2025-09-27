@@ -31,8 +31,15 @@ export async function POST(req: Request) {
     const credential = passkeys.find(p => p.id === credId);
     if (!credential) return NextResponse.json({ error: 'Unknown credential' }, { status: 400 });
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
-    const origin = process.env.NEXT_PUBLIC_ORIGIN || `http://${rpID}:3000`;
+    // Derive expected RP ID and Origin dynamically from request headers, with env overrides
+    const url = new URL(req.url);
+    const forwardedProto = req.headers.get('x-forwarded-proto');
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const hostHeader = forwardedHost || req.headers.get('host') || url.host;
+    const protocol = (forwardedProto || url.protocol.replace(':', '')).toLowerCase();
+    const hostNoPort = hostHeader.split(':')[0];
+    const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
+    const origin = process.env.NEXT_PUBLIC_ORIGIN || `${protocol}://${hostHeader}`;
 
     // Basic shape validation before library call
     if (typeof assertion !== 'object' || !assertion) {
@@ -47,8 +54,8 @@ export async function POST(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let verification: any;
     try {
-      verification = await (verifyAuthenticationResponse as any)({
-        credential: assertion,
+      verification = await verifyAuthenticationResponse({
+        response: assertion,
         expectedChallenge: challenge,
         expectedOrigin: origin,
         expectedRPID: rpID,

@@ -91,6 +91,7 @@ export default function LoginPage() {
       const verifyRes = await fetch('/api/webauthn/register/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Ensure we pass the original attestation object; library expects `response` wrapper
         body: JSON.stringify({ userId: email, attestation: json, challenge: (options as any).challenge, challengeToken: (options as any).challengeToken }),
       });
       const verifyJson = await verifyRes.json();

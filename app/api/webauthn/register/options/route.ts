@@ -14,7 +14,12 @@ export async function POST(req: Request) {
     if (!userId || !userName) return NextResponse.json({ error: 'userId and userName required' }, { status: 400 });
 
     const rpName = process.env.NEXT_PUBLIC_RP_NAME || 'Appwrite Passkey';
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
+    // Prefer dynamic RP based on host header for dev/proxy environments
+    const url = new URL(req.url);
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const hostHeader = forwardedHost || req.headers.get('host') || url.host;
+    const hostNoPort = hostHeader.split(':')[0];
+    const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
 
     // Per simplewebauthn guidance, use a binary user ID (ArrayBuffer/Buffer) instead of a string.
     // Derive a deterministic binary id from the provided userId (e.g. email) via SHA-256.
