@@ -65,11 +65,10 @@ export default function LoginPage() {
       if (options.error) throw new Error(options.error);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const publicKey = { ...options } as any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      publicKey.challenge = base64UrlToBuffer((options as any).challenge);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      publicKey.user.id = base64UrlToBuffer((options as any).user.id);
+      const publicKey: any = { ...options };
+      // Ensure binary fields are ArrayBuffers
+      publicKey.challenge = base64UrlToBuffer(options.challenge as string);
+      publicKey.user.id = base64UrlToBuffer((options as any).user.id as string);
 
       if (publicKey.excludeCredentials) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

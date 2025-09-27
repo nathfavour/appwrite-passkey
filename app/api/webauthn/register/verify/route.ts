@@ -89,13 +89,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Registration verification failed', detail: verification, ...(debug ? { idLen: (credential.id||'').length, rawIdType: typeof credential.rawId, rawIdLen: (credential.rawId||'').length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: challenge.slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
-    const registrationInfo = verification.registrationInfo;
+    const registrationInfo: any = (verification as any).registrationInfo;
     if (!registrationInfo) {
       return NextResponse.json({ error: 'Missing registrationInfo in verification result' }, { status: 500 });
     }
 
-    const credId = registrationInfo.credentialID.toString('base64url');
-    const pubKey = registrationInfo.credentialPublicKey.toString('base64url');
+    // Normalize binary fields to base64url strings
+    const toBase64Url = (val: unknown): string => {
+      if (!val) throw new Error('Missing binary field');
+      if (typeof val === 'string') {
+        // assume already base64url
+        return val;
+      }
+      // Buffer, Uint8Array, ArrayBuffer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyVal: any = val;
+      if (typeof Buffer !== 'undefined' && (Buffer.isBuffer?.(anyVal) || anyVal instanceof Uint8Array)) {
+        return Buffer.from(anyVal).toString('base64url');
+      }
+      if (anyVal instanceof ArrayBuffer) {
+        return Buffer.from(new Uint8Array(anyVal)).toString('base64url');
+      }
+      throw new Error('Unsupported binary field type');
+    };
+
+    const credId = registrationInfo.credentialID ? toBase64Url(registrationInfo.credentialID) : toBase64Url(registrationInfo.credential?.id);
+    const pubKey = toBase64Url(registrationInfo.credentialPublicKey);
     const counter = registrationInfo.counter || 0;
 
     // Attempt storing passkey; if Appwrite not configured, continue gracefully

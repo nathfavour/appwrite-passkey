@@ -53,6 +53,9 @@ export async function POST(req: Request) {
     (options as any).challengeToken = issued.challengeToken;
     // Replace raw challenge with issued.challenge to keep same semantics (generateRegistrationOptions already produced a challenge we ignore now)
     (options as any).challenge = issued.challenge;
+    // Ensure user.id is a base64url string since JSON loses Buffer semantics
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (options as any).user.id = Buffer.from(userIdHash).toString('base64url');
 
     return NextResponse.json(options);
   } catch (err) {
