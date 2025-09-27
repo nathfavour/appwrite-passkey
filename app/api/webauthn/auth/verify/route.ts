@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let verification: any;
     try {
-      verification = await verifyAuthenticationResponse({
+      verification = await (verifyAuthenticationResponse as any)({
         response: assertion,
         expectedChallenge: challenge,
         expectedOrigin: origin,
