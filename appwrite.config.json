@@ -1,0 +1,95 @@
+{
+    "projectId": "customtoken",
+    "endpoint": "https://fra.cloud.appwrite.io/v1",
+    "projectName": "customtoken",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "databases": [
+        {
+            "$id": "webauthnDB",
+            "name": "WebAuthn",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "webauthnCredentials",
+            "databaseId": "webauthnDB",
+            "name": "Credentials",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                { "key": "userId", "type": "string", "required": true, "array": false, "size": 256, "default": null, "encrypt": true },
+                { "key": "publicKey", "type": "string", "required": true, "array": false, "size": 5000, "default": null, "encrypt": true },
+                { "key": "counter", "type": "integer", "required": false, "array": false, "min": -9223372036854775808, "max": 9223372036854775807, "default": 0 },
+                { "key": "createdAt", "type": "datetime", "required": false, "array": false, "format": "", "default": null },
+                { "key": "updatedAt", "type": "datetime", "required": false, "array": false, "format": "", "default": null }
+            ],
+            "indexes": [
+                {
+                    "key": "userId_index",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": ["userId"],
+                    "orders": ["ASC"]
+                }
+            ]
+        },
+        {
+            "$id": "webauthnChallenges",
+            "databaseId": "webauthnDB",
+            "name": "Challenges",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                { "key": "userId", "type": "string", "required": true, "array": false, "size": 256, "default": null, "encrypt": true },
+                { "key": "challenge", "type": "string", "required": true, "array": false, "size": 512, "default": null, "encrypt": true },
+                { "key": "createdAt", "type": "datetime", "required": false, "array": false, "format": "", "default": null }
+            ],
+            "indexes": [
+                {
+                    "key": "createdAt_index",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": ["createdAt"],
+                    "orders": ["ASC"]
+                }
+            ]
+        }
+    ]
+}
