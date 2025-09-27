@@ -43,7 +43,7 @@ async function appwriteFetch(path: string, init: RequestInit) {
 // -------- Challenge Operations --------
 export async function saveChallenge(userId: string, challenge: string) {
   if (!enabled()) return memSaveChallenge(userId, challenge);
-  const payload = { documentId: userId, data: { userId, challenge, createdAt: Date.now() } };
+  const payload = { documentId: userId, data: { userId, challenge, createdAt: new Date().toISOString() } };
   try {
     await appwriteFetch(`/v1/databases/${databaseId}/collections/${challCollection}/documents`, {
       method: 'POST', headers: baseHeaders(), body: JSON.stringify(payload),
@@ -52,7 +52,7 @@ export async function saveChallenge(userId: string, challenge: string) {
     // Try update (document exists)
     try {
       await appwriteFetch(`/v1/databases/${databaseId}/collections/${challCollection}/documents/${userId}`, {
-        method: 'PATCH', headers: baseHeaders(), body: JSON.stringify({ data: { challenge, createdAt: Date.now() } }),
+        method: 'PATCH', headers: baseHeaders(), body: JSON.stringify({ data: { challenge, createdAt: new Date().toISOString() } }),
       });
     } catch {
       // Fallback memory
