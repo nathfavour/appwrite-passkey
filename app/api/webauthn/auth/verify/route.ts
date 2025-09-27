@@ -8,7 +8,8 @@ import { ensureAppwriteUserAndToken } from '../../../../../lib/appwriteUser';
 // On success, provides an Appwrite custom token for session creation.
 export async function POST(req: Request) {
   try {
-    const { userId, assertion } = await req.json();
+    const { userId: rawUserId, assertion } = await req.json();
+    const userId = String(rawUserId).trim();
     if (!userId || !assertion) return NextResponse.json({ error: 'userId and assertion required' }, { status: 400 });
 
     // Rate limit auth verification per IP + credential

@@ -10,7 +10,8 @@ import { ensureAppwriteUserAndToken } from '../../../../../lib/appwriteUser';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, attestation } = body;
+    const { userId: rawUserId, attestation } = body;
+    const userId = String(rawUserId).trim();
     if (!userId || !attestation) return NextResponse.json({ error: 'userId and attestation required' }, { status: 400 });
 
     // Rate limit verification attempts (per IP + user)
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
     // TTL enforcement
     const ttlMs = parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_MS || '120000', 10); // default 2 minutes
     const record = await getChallengeRecord(userId);
-    if (record && record.createdAt && Date.now() - record.createdAt > ttlMs) {
+    const createdAtMs = record && record.createdAt ? (typeof record.createdAt === 'string' ? Date.parse(record.createdAt) : record.createdAt) : null;
+    if (createdAtMs && Date.now() - createdAtMs > ttlMs) {
       await clearChallenge(userId);
       return NextResponse.json({ error: 'Challenge expired' }, { status: 400 });
     }

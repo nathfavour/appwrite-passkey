@@ -9,7 +9,8 @@ import crypto from 'crypto';
 // Applies basic rate limiting per IP.
 export async function POST(req: Request) {
   try {
-    const { userId, userName } = await req.json();
+    const { userId: rawUserId, userName } = await req.json();
+    const userId = String(rawUserId).trim();
     if (!userId || !userName) return NextResponse.json({ error: 'userId and userName required' }, { status: 400 });
 
     const rpName = process.env.NEXT_PUBLIC_RP_NAME || 'Appwrite Passkey';

@@ -7,7 +7,8 @@ import { saveChallenge, getCredentialsByUser, type StoredCredential } from '../.
 // Persistent credential lookup if configured. Rate limited per IP + user.
 export async function POST(req: Request) {
   try {
-    const { userId } = await req.json();
+    const { userId: rawUserId } = await req.json();
+    const userId = String(rawUserId).trim();
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
     const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
