@@ -12,6 +12,7 @@ import {
   getCredentialsByUser as memGetCredentialsByUser,
   updateCounter as memUpdateCounter,
 } from './webauthnStore';
+import type { Credentials } from '@/types/appwrite';
 
 const endpoint = (process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || '').replace(/\/$/, '');
 const project = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
@@ -95,7 +96,7 @@ export async function clearChallenge(userId: string) {
 }
 
 // -------- Credential Operations --------
-export type StoredCredential = { id: string; publicKey: string; counter: number; userId: string };
+export type StoredCredential = { id: string } & Pick<Credentials, 'publicKey' | 'counter' | 'userId'>;
 
 export async function saveCredential(cred: StoredCredential) {
   if (!enabled()) return memSaveCredential(cred);
@@ -119,7 +120,7 @@ export async function getCredentialById(id: string) {
   if (!enabled()) return memGetCredentialById(id);
   try {
     const doc: any = await appwriteFetch(`/v1/databases/${databaseId}/collections/${credsCollection}/documents/${id}`, { method: 'GET', headers: baseHeaders() });
-    return doc?.data ? { id: doc.$id, publicKey: doc.data.publicKey, counter: doc.data.counter, userId: doc.data.userId } : null;
+    return doc?.data ? { id: doc.$id, publicKey: doc.data.publicKey as Credentials['publicKey'], counter: doc.data.counter as Credentials['counter'], userId: doc.data.userId as Credentials['userId'] } : null;
   } catch {
     return null;
   }
@@ -130,7 +131,7 @@ export async function getCredentialsByUser(userId: string) {
   try {
     const query = encodeURIComponent(`equal(\"userId\", \"${userId}\")`);
     const list: any = await appwriteFetch(`/v1/databases/${databaseId}/collections/${credsCollection}/documents?queries[]=${query}`, { method: 'GET', headers: baseHeaders() });
-    return (list.documents || []).map((d: any) => ({ id: d.$id, publicKey: d.data.publicKey, counter: d.data.counter, userId: d.data.userId }));
+    return (list.documents || []).map((d: any) => ({ id: d.$id, publicKey: d.data.publicKey as Credentials['publicKey'], counter: d.data.counter as Credentials['counter'], userId: d.data.userId as Credentials['userId'] } as StoredCredential));
   } catch {
     return [];
   }

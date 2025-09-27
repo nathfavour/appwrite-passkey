@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { saveChallenge, getCredentialsByUser } from '../../../../../lib/webauthnRepo';
+import { saveChallenge, getCredentialsByUser, type StoredCredential } from '../../../../../lib/webauthnRepo';
 
 // Issues WebAuthn authentication (assertion) options.
 // Persistent credential lookup if configured. Rate limited per IP + user.
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const userCreds = await getCredentialsByUser(userId);
-    const allowCredentials = userCreds.map((c: any) => ({ id: c.id, type: 'public-key' }));
+    const allowCredentials = userCreds.map((c: StoredCredential) => ({ id: c.id, type: 'public-key' }));
 
     const options = await generateAuthenticationOptions({
       allowCredentials,
