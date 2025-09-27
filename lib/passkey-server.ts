@@ -37,18 +37,18 @@ export class PasskeyServer {
       throw new Error('Registration verification failed');
     }
 
-    // Store passkey in user preferences
+    // Store passkey in user preferences (support server v7/v8 shapes)
     const registrationInfo: any = (verification as any).registrationInfo;
+    const cred = registrationInfo?.credential || {};
     const passkeyData = {
-      id: (registrationInfo.credentialID instanceof Uint8Array)
-        ? Buffer.from(registrationInfo.credentialID).toString('base64url')
-        : String(registrationInfo.credentialID || ''),
-      publicKey: (registrationInfo.credentialPublicKey instanceof Uint8Array)
-        ? Buffer.from(registrationInfo.credentialPublicKey).toString('base64url')
-        : String(registrationInfo.credentialPublicKey || ''),
-      counter: registrationInfo.counter || 0,
-      transports: credentialData.response?.transports || []
+      id: typeof cred.id === 'string' ? cred.id : Buffer.from(cred.id || new Uint8Array()).toString('base64url'),
+      publicKey: Buffer.from(cred.publicKey || new Uint8Array()).toString('base64url'),
+      counter: typeof cred.counter === 'number' ? cred.counter : (registrationInfo.counter || 0),
+      transports: Array.isArray(cred.transports) ? cred.transports : (credentialData.response?.transports || [])
     };
+    if (!passkeyData.id || !passkeyData.publicKey) {
+      throw new Error('RegistrationInfo missing credential id/publicKey');
+    }
 
     // Get existing passkeys
     const existingPrefs = user.prefs || {};
