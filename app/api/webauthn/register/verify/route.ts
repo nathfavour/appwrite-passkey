@@ -50,13 +50,17 @@ export async function POST(req: Request) {
     }
 
     // Reconstruct minimal credential object expected by simplewebauthn
+    // Decode base64url -> Buffer for binary fields
+    function b64urlToBuf(v: string) {
+      try { return Buffer.from(v, 'base64url'); } catch { return Buffer.from(''); }
+    }
     const credential = {
       id: att.id,
-      rawId: att.rawId,
+      rawId: b64urlToBuf(att.rawId),
       type: att.type,
       response: {
-        clientDataJSON: att.response.clientDataJSON,
-        attestationObject: att.response.attestationObject,
+        clientDataJSON: b64urlToBuf(att.response.clientDataJSON),
+        attestationObject: b64urlToBuf(att.response.attestationObject),
       },
       clientExtensionResults: att.clientExtensionResults || {},
     };
@@ -76,7 +80,7 @@ export async function POST(req: Request) {
     }
 
     if (!verification?.verified) {
-      return NextResponse.json({ error: 'Registration verification failed', detail: verification }, { status: 400 });
+      return NextResponse.json({ error: 'Registration verification failed', detail: verification, ...(debug ? { idLen: (credential.id||'').length, rawIdType: typeof credential.rawId, rawIdBytes: (credential.rawId as Buffer)?.length } : {}) }, { status: 400 });
     }
 
     const registrationInfo = verification.registrationInfo;

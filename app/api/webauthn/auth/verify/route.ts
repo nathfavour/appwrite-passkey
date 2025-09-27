@@ -43,11 +43,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Malformed assertion: missing response.clientDataJSON' }, { status: 400 });
     }
     const debug = process.env.WEBAUTHN_DEBUG === '1';
+    function b64urlToBuf(v: string) { try { return Buffer.from(v, 'base64url'); } catch { return Buffer.from(''); } }
+
+    // Normalize assertion structure into Buffers
+    const asrt: any = assertion;
+    const normalized = {
+      id: asrt.id,
+      rawId: b64urlToBuf(asrt.rawId || asrt.id),
+      type: asrt.type,
+      response: {
+        clientDataJSON: b64urlToBuf(asrt.response?.clientDataJSON),
+        authenticatorData: b64urlToBuf(asrt.response?.authenticatorData),
+        signature: b64urlToBuf(asrt.response?.signature),
+        userHandle: asrt.response?.userHandle ? b64urlToBuf(asrt.response.userHandle) : undefined,
+      },
+      clientExtensionResults: asrt.clientExtensionResults || {},
+    };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let verification: any;
     try {
       verification = await (verifyAuthenticationResponse as any)({
-        credential: assertion,
+        credential: normalized,
         expectedChallenge: challenge,
         expectedOrigin: origin,
         expectedRPID: rpID,
@@ -57,7 +74,7 @@ export async function POST(req: Request) {
         },
       });
     } catch (libErr) {
-      return NextResponse.json({ error: 'WebAuthn library authentication threw', detail: (libErr as Error).message, ...(debug ? { assertionShape: Object.keys(assertion || {}), responseKeys: assertion?.response ? Object.keys(assertion.response) : [] } : {}) }, { status: 400 });
+      return NextResponse.json({ error: 'WebAuthn library authentication threw', detail: (libErr as Error).message, ...(debug ? { assertionShape: Object.keys(normalized || {}), responseKeys: normalized?.response ? Object.keys(normalized.response) : [] } : {}) }, { status: 400 });
     }
 
     if (!verification.verified) {
