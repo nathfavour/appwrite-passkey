@@ -1,4 +1,4 @@
-import { Client, Users, ID } from 'node-appwrite';
+import { Client, Users, ID, Query } from 'node-appwrite';
 import * as SimpleWebAuthnServer from '@simplewebauthn/server';
 import * as SimpleWebAuthnServerHelpers from '@simplewebauthn/server/helpers';
 
@@ -12,16 +12,11 @@ const users = new Users(client);
 
 export class PasskeyServer {
   async prepareUser(email: string) {
-    try {
-      // Try to find existing user by email
-      const usersList = await users.list([`email=${email}`]);
-      if (usersList.users.length > 0) {
-        return usersList.users[0];
-      }
-    } catch (error) {
-      // User doesn't exist, will create new one
+    // Try to find existing user by email
+    const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
+    if ((usersList as any).users?.length > 0) {
+      return (usersList as any).users[0];
     }
-
     // Create new user
     return await users.create(ID.unique(), email);
   }
@@ -31,7 +26,7 @@ export class PasskeyServer {
     const user = await this.prepareUser(email);
 
     // Verify the WebAuthn registration
-    const verification = await SimpleWebAuthnServer.verifyRegistrationResponse({
+    const verification = await (SimpleWebAuthnServer.verifyRegistrationResponse as any)({
       response: credentialData,
       expectedChallenge: challenge,
       expectedOrigin: process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
@@ -43,12 +38,16 @@ export class PasskeyServer {
     }
 
     // Store passkey in user preferences
-    const { registrationInfo } = verification;
+    const registrationInfo: any = (verification as any).registrationInfo;
     const passkeyData = {
-      id: SimpleWebAuthnServerHelpers.isoUint8Array.toHex(registrationInfo.credentialID),
-      publicKey: SimpleWebAuthnServerHelpers.isoUint8Array.toHex(registrationInfo.credentialPublicKey),
-      counter: registrationInfo.counter,
-      transports: credentialData.response.transports || []
+      id: (registrationInfo.credentialID instanceof Uint8Array)
+        ? Buffer.from(registrationInfo.credentialID).toString('base64url')
+        : String(registrationInfo.credentialID || ''),
+      publicKey: (registrationInfo.credentialPublicKey instanceof Uint8Array)
+        ? Buffer.from(registrationInfo.credentialPublicKey).toString('base64url')
+        : String(registrationInfo.credentialPublicKey || ''),
+      counter: registrationInfo.counter || 0,
+      transports: credentialData.response?.transports || []
     };
 
     // Get existing passkeys
@@ -93,15 +92,15 @@ export class PasskeyServer {
     }
 
     // Verify the WebAuthn authentication
-    const verification = await SimpleWebAuthnServer.verifyAuthenticationResponse({
+    const verification = await (SimpleWebAuthnServer.verifyAuthenticationResponse as any)({
       response: assertion,
       expectedChallenge: challenge,
       expectedOrigin: process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
       expectedRPID: process.env.NEXT_PUBLIC_RP_ID || 'localhost',
       authenticator: {
         counter: passkey.counter,
-        credentialID: SimpleWebAuthnServerHelpers.isoUint8Array.fromHex(passkey.id),
-        credentialPublicKey: SimpleWebAuthnServerHelpers.isoUint8Array.fromHex(passkey.publicKey)
+        credentialID: Buffer.from(passkey.id, 'base64url'),
+        credentialPublicKey: Buffer.from(passkey.publicKey, 'base64url')
       }
     });
 
