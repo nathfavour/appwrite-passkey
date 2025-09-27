@@ -3,10 +3,19 @@ import * as SimpleWebAuthnServer from '@simplewebauthn/server';
 import * as SimpleWebAuthnServerHelpers from '@simplewebauthn/server/helpers';
 
 const client = new Client();
-client
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1')
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-  .setKey(process.env.APPWRITE_API!);
+const serverEndpoint = process.env.APPWRITE_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
+const serverProject = process.env.APPWRITE_PROJECT || process.env.NEXT_PUBLIC_APPWRITE_PROJECT || '';
+const serverApiKey = process.env.APPWRITE_API || process.env.APPWRITE_API_KEY || '';
+
+client.setEndpoint(serverEndpoint);
+if (!serverProject) {
+  throw new Error('Missing APPWRITE_PROJECT or NEXT_PUBLIC_APPWRITE_PROJECT');
+}
+client.setProject(serverProject);
+if (!serverApiKey) {
+  throw new Error('Missing APPWRITE_API or APPWRITE_API_KEY');
+}
+client.setKey(serverApiKey);
 
 const users = new Users(client);
 
