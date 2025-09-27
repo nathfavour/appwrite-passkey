@@ -80,6 +80,7 @@ export default function LoginPage() {
       }
 
       const cred = await navigator.credentials.create({ publicKey });
+      console.log('[CLIENT] Created credential raw object:', cred);
       if (!cred) throw new Error('Credential creation returned null');
       if (!(cred as any).response || !(cred as any).response.clientDataJSON) {
         console.warn('Unexpected credential object', cred);
@@ -174,5 +175,5 @@ export default function LoginPage() {
     }
   }
 
-  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskey={signInWithPasskey} onRegister={registerPasskey} loading={loading} message={message} />;
+  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskeyAction={signInWithPasskey} onRegisterAction={registerPasskey} loading={loading} message={message} />;
 }

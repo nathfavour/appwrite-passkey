@@ -5,25 +5,25 @@ import React, { useState } from 'react';
 type Props = {
   email: string;
   onEmailChangeAction: (value: string) => void;
-  onPasskey: () => Promise<void> | void; // sign in handler
-  onRegister?: () => Promise<void> | void; // register handler
+  onPasskeyAction: () => Promise<void> | void; // sign in handler
+  onRegisterAction?: () => Promise<void> | void; // register handler
   loading?: boolean;
   message?: string | null;
 };
 
 export default function AuthForm({
   email,
-  onEmailChangeAction: onEmailChangeAction,
-  onPasskey,
-  onRegister,
+  onEmailChangeAction,
+  onPasskeyAction,
+  onRegisterAction,
   loading = false,
   message,
 }: Props) {
-  const [mode, setMode] = useState<'signin' | 'register'>(onRegister ? 'signin' : 'signin');
+  const [mode, setMode] = useState<'signin' | 'register'>(onRegisterAction ? 'signin' : 'signin');
 
   const primaryAction = async () => {
-    if (mode === 'register' && onRegister) return onRegister();
-    return onPasskey();
+    if (mode === 'register' && onRegisterAction) return onRegisterAction();
+    return onPasskeyAction();
   };
 
   const primaryLabel = mode === 'register' ? 'Register Passkey' : 'Sign In with Passkey';
@@ -77,7 +77,7 @@ export default function AuthForm({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button
             onClick={primaryAction}
-            disabled={loading || (mode === 'register' && !onRegister)}
+            disabled={loading || (mode === 'register' && !onRegisterAction)}
             style={{
               padding: '12px 16px',
               background: mode === 'register' ? '#6366f1' : '#0ea5e9',
@@ -96,7 +96,7 @@ export default function AuthForm({
             {loading ? 'Please wait…' : primaryLabel}
           </button>
 
-            {onRegister && (
+            {onRegisterAction && (
               <button
                 type="button"
                 disabled={loading}

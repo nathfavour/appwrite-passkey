@@ -42,20 +42,26 @@ export async function POST(req: Request) {
     if (!(assertion as any).response || !(assertion as any).response.clientDataJSON) {
       return NextResponse.json({ error: 'Malformed assertion: missing response.clientDataJSON' }, { status: 400 });
     }
+    const debug = process.env.WEBAUTHN_DEBUG === '1';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const verification = await (verifyAuthenticationResponse as any)({
-      credential: assertion,
-      expectedChallenge: challenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
-      authenticator: {
-        counter: credential.counter,
-        credentialPublicKey: Buffer.from(credential.publicKey, 'base64url'),
-      },
-    });
+    let verification: any;
+    try {
+      verification = await (verifyAuthenticationResponse as any)({
+        credential: assertion,
+        expectedChallenge: challenge,
+        expectedOrigin: origin,
+        expectedRPID: rpID,
+        authenticator: {
+          counter: credential.counter,
+          credentialPublicKey: Buffer.from(credential.publicKey, 'base64url'),
+        },
+      });
+    } catch (libErr) {
+      return NextResponse.json({ error: 'WebAuthn library authentication threw', detail: (libErr as Error).message, ...(debug ? { assertionShape: Object.keys(assertion || {}), responseKeys: assertion?.response ? Object.keys(assertion.response) : [] } : {}) }, { status: 400 });
+    }
 
     if (!verification.verified) {
-      return NextResponse.json({ error: 'Authentication verification failed' }, { status: 400 });
+      return NextResponse.json({ error: 'Authentication verification failed', ...(debug ? { verification } : {}) }, { status: 400 });
     }
 
     await updatePasskeyCounter(userId, credential.id, verification.authenticationInfo!.newCounter || credential.counter);
@@ -65,6 +71,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message || String(err) }, { status: 500 });
+    const debug = process.env.WEBAUTHN_DEBUG === '1';
+    return NextResponse.json({ error: (err as Error).message || String(err), ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });
   }
 }
