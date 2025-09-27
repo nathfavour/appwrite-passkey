@@ -85,7 +85,7 @@ export default function LoginPage() {
       const verifyRes = await fetch('/api/webauthn/register/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: email, attestation: json }),
+        body: JSON.stringify({ userId: email, attestation: json, challenge: (options as any).challenge, challengeToken: (options as any).challengeToken }),
       });
       const verifyJson = await verifyRes.json();
       if (verifyJson.error) throw new Error(verifyJson.error);
@@ -145,7 +145,7 @@ export default function LoginPage() {
       const verifyRes = await fetch('/api/webauthn/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: email, assertion: json }),
+        body: JSON.stringify({ userId: email, assertion: json, challenge: (options as any).challenge, challengeToken: (options as any).challengeToken }),
       });
       const verifyJson = await verifyRes.json();
       if (verifyJson.error) throw new Error(verifyJson.error);

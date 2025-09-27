@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
-import { getChallenge, getChallengeRecord, clearChallenge, getCredentialById, updateCounter } from '../../../../../lib/webauthnRepo';
+import { verifyChallengeToken, getPasskeys, updatePasskeyCounter, createCustomToken } from '../../../../../lib/passkeys';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
-import { ensureAppwriteUserAndToken } from '../../../../../lib/appwriteUser';
 
 // Verifies WebAuthn authentication assertion and updates signature counter.
 // On success, provides an Appwrite custom token for session creation.
 export async function POST(req: Request) {
   try {
-    const { userId: rawUserId, assertion } = await req.json();
+    const { userId: rawUserId, assertion, challengeToken, challenge } = await req.json();
     const userId = String(rawUserId).trim();
-    if (!userId || !assertion) return NextResponse.json({ error: 'userId and assertion required' }, { status: 400 });
+    if (!userId || !assertion || !challengeToken || !challenge) return NextResponse.json({ error: 'userId, assertion, challenge and challengeToken required' }, { status: 400 });
 
     // Rate limit auth verification per IP + credential
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -19,19 +18,17 @@ export async function POST(req: Request) {
     const rl = rateLimit(buildRateKey(['webauthn','auth','verify', ip, userId]), max, windowMs);
     if (!rl.allowed) return NextResponse.json({ error: 'Too many authentication attempts. Please wait.' }, { status: 429, headers: { 'Retry-After': Math.ceil((rl.reset - Date.now())/1000).toString() } });
 
-    const expectedChallenge = await getChallenge(userId);
-    if (!expectedChallenge) return NextResponse.json({ error: 'No challenge for user' }, { status: 400 });
-
-    // TTL enforcement
-    const ttlMs = parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_MS || '120000', 10);
-    const record = await getChallengeRecord(userId);
-    if (record && record.createdAt && Date.now() - record.createdAt > ttlMs) {
-      await clearChallenge(userId);
-      return NextResponse.json({ error: 'Challenge expired' }, { status: 400 });
+    // Stateless challenge validation
+    try {
+      verifyChallengeToken(userId, challenge, challengeToken);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
 
+    // Find credential in preferences
     const credId = assertion.rawId || assertion.id;
-    const credential = await getCredentialById(credId);
+    const passkeys = await getPasskeys(userId);
+    const credential = passkeys.find(p => p.id === credId);
     if (!credential) return NextResponse.json({ error: 'Unknown credential' }, { status: 400 });
 
     const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
@@ -40,7 +37,7 @@ export async function POST(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const verification = await (verifyAuthenticationResponse as any)({
       credential: assertion,
-      expectedChallenge,
+      expectedChallenge: challenge,
       expectedOrigin: origin,
       expectedRPID: rpID,
       authenticator: {
@@ -53,10 +50,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Authentication verification failed' }, { status: 400 });
     }
 
-    await updateCounter(credential.id, verification.authenticationInfo!.newCounter || credential.counter);
-    await clearChallenge(userId);
+    await updatePasskeyCounter(userId, credential.id, verification.authenticationInfo!.newCounter || credential.counter);
 
-    const token = await ensureAppwriteUserAndToken(userId);
+    const token = await createCustomToken(userId);
     if (token?.secret) return NextResponse.json({ success: true, token: { ...token, userId } });
 
     return NextResponse.json({ success: true });

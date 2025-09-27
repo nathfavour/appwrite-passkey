@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { saveChallenge, getCredentialsByUser, type StoredCredential } from '../../../../../lib/webauthnRepo';
+import { issueChallenge, getPasskeys } from '../../../../../lib/passkeys';
 
 // Issues WebAuthn authentication (assertion) options.
 // Persistent credential lookup if configured. Rate limited per IP + user.
@@ -22,8 +22,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Too many authentication attempts. Please wait.' }, { status: 429, headers: { 'Retry-After': Math.ceil((rl.reset - Date.now())/1000).toString() } });
     }
 
-    const userCreds = await getCredentialsByUser(userId);
-    const allowCredentials = userCreds.map((c: StoredCredential) => ({ id: c.id, type: 'public-key' }));
+    const userCreds = await getPasskeys(userId);
+    const allowCredentials = userCreds.map((c) => ({ id: c.id, type: 'public-key' }));
 
     const options = await generateAuthenticationOptions({
       allowCredentials,
@@ -31,8 +31,11 @@ export async function POST(req: Request) {
       rpID,
     });
 
+    // Stateless challenge
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    saveChallenge(userId, (options as any).challenge);
+    const issued = issueChallenge(userId, parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_MS || '120000', 10));
+    (options as any).challengeToken = issued.challengeToken;
+    (options as any).challenge = issued.challenge; // override challenge to one we control
     return NextResponse.json(options);
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message || String(err) }, { status: 500 });

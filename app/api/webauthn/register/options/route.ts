@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
-import { saveChallenge } from '../../../../../lib/webauthnRepo';
+import { issueChallenge } from '../../../../../lib/passkeys';
 import crypto from 'crypto';
 
 // Issues WebAuthn registration (attestation) options.
@@ -42,9 +42,12 @@ export async function POST(req: Request) {
       // You can set pubKeyCredParams, timeout, etc.
     });
 
-    // Store challenge to validate later (keep challenge keyed by the app-level userId string)
+        // Stateless signed challenge token (no server storage)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    saveChallenge(userId, (options as any).challenge);
+    const issued = issueChallenge(userId, parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_MS || '120000', 10));
+    (options as any).challengeToken = issued.challengeToken;
+    // Replace raw challenge with issued.challenge to keep same semantics (generateRegistrationOptions already produced a challenge we ignore now)
+    (options as any).challenge = issued.challenge;
 
     return NextResponse.json(options);
   } catch (err) {
