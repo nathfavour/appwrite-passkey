@@ -1,7 +1,8 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
-import { verifyChallengeToken, getPasskeys, updatePasskeyCounter, createCustomToken } from '../../../../../lib/passkeys';
+import { verifyChallengeToken, getPasskeys } from '../../../../../lib/passkeys';
+import { PasskeyServer } from '../../../../../lib/passkey-server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 
 // Verifies WebAuthn authentication assertion and updates signature counter.
@@ -73,12 +74,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Authentication verification failed', ...(debug ? { verification } : {}) }, { status: 400 });
     }
 
-    await updatePasskeyCounter(userId, credential.id, verification.authenticationInfo!.newCounter || credential.counter);
-
-    const token = await createCustomToken(userId);
-    if (token?.secret) return NextResponse.json({ success: true, token: { ...token, userId } });
-
-    return NextResponse.json({ success: true });
+    const server = new PasskeyServer();
+    // server.authenticatePasskey will update counter and mint custom token
+    const result = await server.authenticatePasskey(userId, assertion, challenge);
+    if (!result?.token?.secret) {
+      return NextResponse.json({ error: 'Failed to create custom token' }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, token: result.token });
   } catch (err) {
     const debug = process.env.WEBAUTHN_DEBUG === '1';
     return NextResponse.json({ error: (err as Error).message || String(err), ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });

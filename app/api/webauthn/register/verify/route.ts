@@ -1,7 +1,8 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
-import { verifyChallengeToken, addPasskey, createCustomToken } from '../../../../../lib/passkeys';
+import { verifyChallengeToken } from '../../../../../lib/passkeys';
+import { PasskeyServer } from '../../../../../lib/passkey-server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 
 // Verifies WebAuthn registration response then stores credential.
@@ -96,10 +97,9 @@ export async function POST(req: Request) {
     }
 
     // Normalize binary fields to base64url strings
-    const toBase64Url = (val: unknown): string => {
-      if (!val) throw new Error('Missing binary field');
+    const toBase64Url = (val: unknown): string | null => {
+      if (!val) return null;
       if (typeof val === 'string') {
-        // assume already base64url
         return val;
       }
       // Buffer, Uint8Array, ArrayBuffer
@@ -111,27 +111,28 @@ export async function POST(req: Request) {
       if (anyVal instanceof ArrayBuffer) {
         return Buffer.from(new Uint8Array(anyVal)).toString('base64url');
       }
-      throw new Error('Unsupported binary field type');
+      return null;
     };
 
-    const credId = registrationInfo.credentialID ? toBase64Url(registrationInfo.credentialID) : toBase64Url(registrationInfo.credential?.id);
-    const pubKey = toBase64Url(registrationInfo.credentialPublicKey);
-    const counter = registrationInfo.counter || 0;
+    // Support both v7 and v8 shapes from simplewebauthn
+    const credObj = registrationInfo.credential || {};
+    const credId = toBase64Url(credObj.id) || toBase64Url((registrationInfo as any).credentialID);
+    const pubKey = toBase64Url(credObj.publicKey) || toBase64Url((registrationInfo as any).credentialPublicKey);
+    const counter = credObj.counter ?? registrationInfo.counter ?? 0;
+    const transports = credObj.transports ?? [];
 
-    // Attempt storing passkey; if Appwrite not configured, continue gracefully
-    try {
-      await addPasskey(userId, { id: credId, publicKey: pubKey, counter });
-    } catch (storeErr) {
-      // Provide explicit message to help configure backend
-      console.warn('Passkey store failed (continuing):', (storeErr as Error).message);
+    if (!credId || !pubKey) {
+      const debug = process.env.WEBAUTHN_DEBUG === '1';
+      return NextResponse.json({ error: 'Registration returned incomplete credential', ...(debug ? { registrationInfoKeys: Object.keys(registrationInfo || {}), credentialKeys: Object.keys(credObj || {}) } : {}) }, { status: 500 });
     }
 
-    const token = await createCustomToken(userId).catch(() => null);
-    if (token?.secret) {
-      return NextResponse.json({ success: true, token: { ...token, userId } });
+    // Persist passkey in user prefs and create a custom token (server-side API key)
+    const server = new PasskeyServer();
+    const result = await server.registerPasskey(userId, attestation, challenge);
+    if (!result?.token?.secret) {
+      return NextResponse.json({ error: 'Failed to create custom token' }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, token: result.token });
   } catch (err) {
     const debug = process.env.WEBAUTHN_DEBUG === '1';
     return NextResponse.json({ error: (err as Error).message || String(err), ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });
