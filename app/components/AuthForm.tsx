@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 type Props = {
   email: string;
-  onEmailChange: (value: string) => void;
+  onEmailChangeAction: (value: string) => void;
   onPasskey: () => Promise<void> | void; // sign in handler
   onRegister?: () => Promise<void> | void; // register handler
   loading?: boolean;
@@ -13,7 +13,7 @@ type Props = {
 
 export default function AuthForm({
   email,
-  onEmailChange,
+  onEmailChangeAction: onEmailChangeAction,
   onPasskey,
   onRegister,
   loading = false,
@@ -58,7 +58,7 @@ export default function AuthForm({
           <input
             type="email"
             value={email}
-            onChange={(e) => onEmailChange(e.target.value.trim())}
+            onChange={(e) => onEmailChangeAction(e.target.value.trim())}
             placeholder="you@example.com"
             autoComplete="username"
             style={{

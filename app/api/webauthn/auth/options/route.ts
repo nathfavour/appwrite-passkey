@@ -8,7 +8,7 @@ import { issueChallenge, getPasskeys } from '../../../../../lib/passkeys';
 export async function POST(req: Request) {
   try {
     const { userId: rawUserId } = await req.json();
-    const userId = String(rawUserId).trim();
+    const userId = String(rawUserId).trim().toLowerCase();
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
     const rpID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';

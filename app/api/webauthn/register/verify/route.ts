@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { userId: rawUserId, attestation, challengeToken, challenge } = body;
-    const userId = String(rawUserId).trim();
+    const userId = String(rawUserId).trim().toLowerCase();
     if (!userId || !attestation || !challengeToken || !challenge) return NextResponse.json({ error: 'userId, attestation, challenge and challengeToken required' }, { status: 400 });
 
     // Rate limit verification attempts (per IP + user)

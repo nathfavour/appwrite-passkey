@@ -8,7 +8,7 @@ import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 export async function POST(req: Request) {
   try {
     const { userId: rawUserId, assertion, challengeToken, challenge } = await req.json();
-    const userId = String(rawUserId).trim();
+    const userId = String(rawUserId).trim().toLowerCase();
     if (!userId || !assertion || !challengeToken || !challenge) return NextResponse.json({ error: 'userId, assertion, challenge and challengeToken required' }, { status: 400 });
 
     // Rate limit auth verification per IP + credential

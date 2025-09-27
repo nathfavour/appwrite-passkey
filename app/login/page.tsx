@@ -169,5 +169,5 @@ export default function LoginPage() {
     }
   }
 
-  return <AuthForm email={email} onEmailChange={setEmail} onPasskey={signInWithPasskey} onRegister={registerPasskey} loading={loading} message={message} />;
+  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskey={signInWithPasskey} onRegister={registerPasskey} loading={loading} message={message} />;
 }

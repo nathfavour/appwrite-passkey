@@ -1,7 +1,16 @@
 import crypto from 'crypto';
 
-// Stateless challenge utilities + credential storage in Appwrite user preferences.
-// Requires: NEXT_PUBLIC_APPWRITE_ENDPOINT, NEXT_PUBLIC_APPWRITE_PROJECT, APPWRITE_API, PASSKEY_CHALLENGE_SECRET
+// Stateless WebAuthn passkey support:
+// - issueChallenge(): creates random challenge + HMAC-signed token (no server storage)
+// - verifyChallengeToken(): validates challenge, user binding, expiry
+// - Credentials stored in Appwrite user preferences (passkeys array)
+// - addPasskey/updatePasskeyCounter operate purely via Users API
+// - createCustomToken() mints short-lived secret for session exchange
+// Environment vars required: NEXT_PUBLIC_APPWRITE_ENDPOINT, NEXT_PUBLIC_APPWRITE_PROJECT, APPWRITE_API, PASSKEY_CHALLENGE_SECRET
+// Security notes:
+//   * PASSKEY_CHALLENGE_SECRET must be strong & rotated if leaked
+//   * Lowercasing of userId occurs in routes to ensure deterministic keys
+//   * Counters help detect cloned authenticators; currently just overwrite stored counter
 
 const endpoint = (process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || '').replace(/\/$/, '');
 const project = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;

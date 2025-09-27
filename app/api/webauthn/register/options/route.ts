@@ -10,7 +10,7 @@ import crypto from 'crypto';
 export async function POST(req: Request) {
   try {
     const { userId: rawUserId, userName } = await req.json();
-    const userId = String(rawUserId).trim();
+    const userId = String(rawUserId).trim().toLowerCase();
     if (!userId || !userName) return NextResponse.json({ error: 'userId and userName required' }, { status: 400 });
 
     const rpName = process.env.NEXT_PUBLIC_RP_NAME || 'Appwrite Passkey';
