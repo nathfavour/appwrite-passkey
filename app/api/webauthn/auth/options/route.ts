@@ -28,7 +28,10 @@ export async function POST(req: Request) {
     }
 
     const userCreds = await getPasskeys(userId);
-    const allowCredentials = userCreds.map((c) => ({ id: c.id, type: 'public-key' }));
+    // Ensure ids are base64url strings for JSON output, the client will convert to ArrayBuffers
+    const allowCredentials = userCreds
+      .filter((c) => c && c.id && typeof c.id === 'string')
+      .map((c) => ({ id: c.id, type: 'public-key' }));
 
     const options = await generateAuthenticationOptions({
       allowCredentials,

@@ -21,13 +21,17 @@ const users = new Users(client);
 
 export class PasskeyServer {
   async prepareUser(email: string) {
-    // Try to find existing user by email
+    // Prefer using email as deterministic userId
+    try {
+      return await users.get(email);
+    } catch {}
+    // Fallback: find by email
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
     if ((usersList as any).users?.length > 0) {
       return (usersList as any).users[0];
     }
-    // Create new user
-    return await users.create(ID.unique(), email);
+    // Create with custom ID equal to email for consistency with routes
+    return await users.create(ID.custom(email), email);
   }
 
   async registerPasskey(email: string, credentialData: any, challenge: string) {
@@ -61,12 +65,20 @@ export class PasskeyServer {
 
     // Get existing passkeys
     const existingPrefs = user.prefs || {};
-    const passkeys = existingPrefs.passkeys || [];
+    // If prefs.passkeys is a stringified JSON, parse it, else if it's an object use it, otherwise init array
+    let passkeys: Array<{ id: string; publicKey: string; counter: number; transports?: string[] }> = [];
+    const raw = (existingPrefs as any).passkeys;
+    if (Array.isArray(raw)) {
+      passkeys = raw;
+    } else if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+      try { passkeys = JSON.parse(raw); } catch { passkeys = []; }
+    }
     
     // Add new passkey
     passkeys.push(passkeyData);
     
     // Update user preferences
+    // Store as a proper JSON array, not [object Object]
     await users.updatePrefs(user.$id, { passkeys });
 
     // Create custom token

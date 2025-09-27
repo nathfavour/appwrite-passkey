@@ -80,7 +80,12 @@ export async function getPasskeys(userId: string): Promise<StoredPasskey[]> {
   const user = await fetchUser(userId);
   if (!user) return [];
   const prefs = user.prefs || user.preferences || {};
-  return (prefs.passkeys as StoredPasskey[]) || [];
+  const raw = (prefs as any).passkeys;
+  if (Array.isArray(raw)) return raw as StoredPasskey[];
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) as StoredPasskey[]; } catch { return []; }
+  }
+  return [];
 }
 
 async function writePasskeys(userId: string, passkeys: StoredPasskey[]) {
