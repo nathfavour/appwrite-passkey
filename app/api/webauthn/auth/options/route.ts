@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { issueChallenge, getPasskeys } from '../../../../../lib/passkeys';
+import { issueChallenge } from '../../../../../lib/passkeys';
+import { PasskeyServer } from '../../../../../lib/passkey-server';
 
 // Issues WebAuthn authentication (assertion) options.
 // Persistent credential lookup if configured. Rate limited per IP + user.
@@ -27,7 +28,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Too many authentication attempts. Please wait.' }, { status: 429, headers: { 'Retry-After': Math.ceil((rl.reset - Date.now())/1000).toString() } });
     }
 
-    const userCreds = await getPasskeys(userId);
+    const server = new PasskeyServer();
+    const userCreds = await server.getPasskeysByEmail(userId);
     // Ensure ids are base64url strings for JSON output, the client will convert to ArrayBuffers
     const allowCredentials = userCreds
       .filter((c) => c && c.id && typeof c.id === 'string')

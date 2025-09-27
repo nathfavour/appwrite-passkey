@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
     const server = new PasskeyServer();
     // server.authenticatePasskey will update counter and mint custom token
-    const result = await server.authenticatePasskey(userId, assertion, challenge);
+    const result = await server.authenticatePasskey(userId, assertion, challenge, { rpID, origin });
     if (!result?.token?.secret) {
       return NextResponse.json({ error: 'Failed to create custom token' }, { status: 500 });
     }

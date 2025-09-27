@@ -1,4 +1,5 @@
 import { Client, Users, ID, Query } from 'node-appwrite';
+import crypto from 'crypto';
 import * as SimpleWebAuthnServer from '@simplewebauthn/server';
 import * as SimpleWebAuthnServerHelpers from '@simplewebauthn/server/helpers';
 
@@ -20,21 +21,33 @@ client.setKey(serverApiKey);
 const users = new Users(client);
 
 export class PasskeyServer {
+  private deriveUserId(email: string): string {
+    const hash = crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('base64url');
+    // Ensure <= 36 chars, valid charset, non-special start
+    return `pk_${hash.slice(0, 32)}`;
+  }
+
   async prepareUser(email: string) {
-    // Prefer using email as deterministic userId
+    const userId = this.deriveUserId(email);
+    // Try deterministic ID first
     try {
-      return await users.get(email);
+      return await users.get(userId);
     } catch {}
-    // Fallback: find by email
+    // Fallback: find by email (in case user was created before)
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
     if ((usersList as any).users?.length > 0) {
       return (usersList as any).users[0];
     }
-    // Create with custom ID equal to email for consistency with routes
-    return await users.create(ID.custom(email), email);
+    // Create with deterministic custom ID
+    return await users.create(ID.custom(userId), email);
   }
 
-  async registerPasskey(email: string, credentialData: any, challenge: string) {
+  async registerPasskey(
+    email: string,
+    credentialData: any,
+    challenge: string,
+    opts?: { rpID?: string; origin?: string }
+  ) {
     // Prepare user
     const user = await this.prepareUser(email);
 
@@ -42,8 +55,8 @@ export class PasskeyServer {
     const verification = await (SimpleWebAuthnServer.verifyRegistrationResponse as any)({
       response: credentialData,
       expectedChallenge: challenge,
-      expectedOrigin: process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
-      expectedRPID: process.env.NEXT_PUBLIC_RP_ID || 'localhost'
+      expectedOrigin: opts?.origin || process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
+      expectedRPID: opts?.rpID || process.env.NEXT_PUBLIC_RP_ID || 'localhost'
     });
 
     if (!verification.verified) {
@@ -93,7 +106,12 @@ export class PasskeyServer {
     };
   }
 
-  async authenticatePasskey(email: string, assertion: any, challenge: string) {
+  async authenticatePasskey(
+    email: string,
+    assertion: any,
+    challenge: string,
+    opts?: { rpID?: string; origin?: string }
+  ) {
     // Prepare user
     const user = await this.prepareUser(email);
 
@@ -116,8 +134,8 @@ export class PasskeyServer {
     const verification = await (SimpleWebAuthnServer.verifyAuthenticationResponse as any)({
       response: assertion,
       expectedChallenge: challenge,
-      expectedOrigin: process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
-      expectedRPID: process.env.NEXT_PUBLIC_RP_ID || 'localhost',
+      expectedOrigin: opts?.origin || process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
+      expectedRPID: opts?.rpID || process.env.NEXT_PUBLIC_RP_ID || 'localhost',
       authenticator: {
         counter: passkey.counter,
         credentialID: Buffer.from(passkey.id, 'base64url'),
@@ -148,5 +166,15 @@ export class PasskeyServer {
         userId: user.$id
       }
     };
+  }
+
+  async getPasskeysByEmail(email: string): Promise<Array<{ id: string; publicKey: string; counter: number }>> {
+    const user = await this.prepareUser(email);
+    const raw = (user.prefs as any)?.passkeys;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+    return [];
   }
 }

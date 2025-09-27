@@ -128,7 +128,7 @@ export async function POST(req: Request) {
 
     // Persist passkey in user prefs and create a custom token (server-side API key)
     const server = new PasskeyServer();
-    const result = await server.registerPasskey(userId, attestation, challenge);
+    const result = await server.registerPasskey(userId, attestation, challenge, { rpID, origin });
     if (!result?.token?.secret) {
       return NextResponse.json({ error: 'Failed to create custom token' }, { status: 500 });
     }
