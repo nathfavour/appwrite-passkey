@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { verifyChallengeToken, addPasskey, createCustomToken } from '../../../../../lib/passkeys';
