@@ -317,5 +317,6 @@ export default function LoginPage() {
   }
 
   // Wire the one-button flow to the primary action; keep register action available to avoid breaking existing flows
-  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskeyAction={continueWithPasskey} onRegisterAction={registerPasskey} loading={loading} message={message} />;
+  // Single-button mode: only provide onPasskeyAction so the form renders a single "Continue with Passkey" button
+  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskeyAction={continueWithPasskey} loading={loading} message={message} />;
 }

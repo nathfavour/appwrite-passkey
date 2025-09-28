@@ -20,13 +20,18 @@ export default function AuthForm({
   message,
 }: Props) {
   const [mode, setMode] = useState<'signin' | 'register'>(onRegisterAction ? 'signin' : 'signin');
+  const singleMode = !onRegisterAction;
 
   const primaryAction = async () => {
     if (mode === 'register' && onRegisterAction) return onRegisterAction();
     return onPasskeyAction();
   };
 
-  const primaryLabel = mode === 'register' ? 'Register Passkey' : 'Sign In with Passkey';
+  const primaryLabel = singleMode
+    ? 'Continue with Passkey'
+    : mode === 'register'
+      ? 'Register Passkey'
+      : 'Sign In with Passkey';
   const switchLabel = mode === 'register' ? 'Have a passkey? Sign in' : 'Need a passkey? Register';
 
   return (
@@ -44,12 +49,14 @@ export default function AuthForm({
       >
         <header style={{ marginBottom: 20 }}>
           <h1 style={{ margin: 0, marginBottom: 6, color: '#0f172a', fontSize: 24 }}>
-            {mode === 'register' ? 'Register a New Passkey' : 'Passkey Sign In'}
+            {singleMode ? 'Passkey' : mode === 'register' ? 'Register a New Passkey' : 'Passkey Sign In'}
           </h1>
           <p style={{ margin: 0, color: '#1e3a8a', fontSize: 14 }}>
-            {mode === 'register'
-              ? 'Create a passkey bound to your device (WebAuthn).'
-              : 'Authenticate using an existing passkey.'}
+            {singleMode
+              ? 'Use a single button to sign in or register with your device passkey.'
+              : mode === 'register'
+                ? 'Create a passkey bound to your device (WebAuthn).'
+                : 'Authenticate using an existing passkey.'}
           </p>
         </header>
 
