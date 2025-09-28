@@ -21,6 +21,24 @@ client.setKey(serverApiKey);
 const users = new Users(client);
 
 export class PasskeyServer {
+  async getUserIfExists(email: string): Promise<any | null> {
+    const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
+    return (usersList as any).users?.[0] ?? null;
+  }
+
+  private parseCredsMap(str: string | undefined): Record<string, string> {
+    if (!str) return {};
+    try { return JSON.parse(str) as Record<string, string>; } catch { return {}; }
+  }
+
+  async shouldBlockPasskeyForEmail(email: string): Promise<boolean> {
+    const user = await this.getUserIfExists(email);
+    if (!user) return false;
+    const hasWallet = !!(user.prefs?.walletEth);
+    const credsObj = this.parseCredsMap(user.prefs?.passkey_credentials as string | undefined);
+    const hasPasskeys = Object.keys(credsObj).length > 0;
+    return hasWallet && !hasPasskeys;
+  }
   async prepareUser(email: string) {
     // Find existing by email
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
@@ -79,11 +97,11 @@ export class PasskeyServer {
     counterObj[passkeyData.id] = passkeyData.counter;
     
     // Serialize back to strings
-    // Update user preferences with auth helpers as JSON strings
-    await users.updatePrefs(user.$id, { 
-      passkey_credentials: JSON.stringify(credObj),
-      passkey_counter: JSON.stringify(counterObj)
-    });
+    // Merge existing prefs to avoid overwriting unrelated keys (e.g., walletEth)
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_credentials = JSON.stringify(credObj);
+    mergedPrefs.passkey_counter = JSON.stringify(counterObj);
+    await users.updatePrefs(user.$id, mergedPrefs);
 
     // Create custom token
     const token = await users.createToken(user.$id, 64, 60);

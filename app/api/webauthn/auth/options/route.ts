@@ -29,6 +29,10 @@ export async function POST(req: Request) {
     }
 
     const server = new PasskeyServer();
+    // Block passkey flow if wallet is connected and no passkey exists yet
+    if (await server.shouldBlockPasskeyForEmail(userId)) {
+      return NextResponse.json({ error: 'Account already connected with wallet' }, { status: 403 });
+    }
     const userCreds = await server.getPasskeysByEmail(userId);
     // Ensure ids are base64url strings for JSON output, the client will convert to ArrayBuffers
     const allowCredentials = userCreds
