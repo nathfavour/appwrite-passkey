@@ -80,16 +80,35 @@ export async function getPasskeys(userId: string): Promise<StoredPasskey[]> {
   const user = await fetchUser(userId);
   if (!user) return [];
   const prefs = user.prefs || user.preferences || {};
-  const raw = (prefs as any).passkeys;
-  if (Array.isArray(raw)) return raw as StoredPasskey[];
-  if (typeof raw === 'string') {
-    try { return JSON.parse(raw) as StoredPasskey[]; } catch { return []; }
-  }
-  return [];
+  const credentials = (prefs.passkey_credentials || '') as string;
+  
+  if (!credentials) return [];
+  
+  // Parse credentials auth helper into array format
+  const result: StoredPasskey[] = [];
+  credentials.split(',').forEach(pair => {
+    const [id, pk] = pair.split(':');
+    if (id && pk) {
+      result.push({ id, publicKey: pk, counter: 0 }); // counter stored separately
+    }
+  });
+  
+  return result;
 }
 
 async function writePasskeys(userId: string, passkeys: StoredPasskey[]) {
-  const res = await fetch(`${endpoint}/v1/users/${encodeURIComponent(userId)}/prefs`, { method: 'PATCH', headers: baseHeaders(), body: JSON.stringify({ passkeys }) });
+  // Convert to auth helper format
+  const credentials = passkeys.map(p => `${p.id}:${p.publicKey}`).join(',');
+  const counters = passkeys.map(p => `${p.id}:${p.counter}`).join(',');
+  
+  const res = await fetch(`${endpoint}/v1/users/${encodeURIComponent(userId)}/prefs`, { 
+    method: 'PATCH', 
+    headers: baseHeaders(), 
+    body: JSON.stringify({ 
+      passkey_credentials: credentials,
+      passkey_counter: counters 
+    }) 
+  });
   if (!res.ok) throw new Error(`Write prefs failed ${res.status}`);
   return res.json();
 }
@@ -102,10 +121,32 @@ export async function addPasskey(userId: string, pk: StoredPasskey) {
 }
 
 export async function updatePasskeyCounter(userId: string, id: string, counter: number) {
-  const existing = await getPasskeys(userId);
-  const target = existing.find(e => e.id === id);
-  if (target) target.counter = counter;
-  await writePasskeys(userId, existing);
+  const user = await fetchUser(userId);
+  if (!user) return;
+  
+  const counters = (user.prefs?.passkey_counter || '') as string;
+  const counterMap = new Map<string, number>();
+  
+  // Parse existing counters
+  counters.split(',').forEach(pair => {
+    const [cid, cnt] = pair.split(':');
+    if (cid && cnt) counterMap.set(cid, parseInt(cnt, 10));
+  });
+  
+  // Update specific counter
+  counterMap.set(id, counter);
+  
+  // Write back
+  const newCounters = Array.from(counterMap.entries())
+    .map(([cid, cnt]) => `${cid}:${cnt}`)
+    .join(',');
+    
+  const res = await fetch(`${endpoint}/v1/users/${encodeURIComponent(userId)}/prefs`, { 
+    method: 'PATCH', 
+    headers: baseHeaders(), 
+    body: JSON.stringify({ passkey_counter: newCounters }) 
+  });
+  if (!res.ok) throw new Error(`Update counter failed ${res.status}`);
 }
 
 export async function createCustomToken(userId: string) {

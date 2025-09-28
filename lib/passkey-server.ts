@@ -76,23 +76,46 @@ export class PasskeyServer {
       throw new Error('RegistrationInfo missing credential id/publicKey');
     }
 
-    // Get existing passkeys
+    // Get existing auth helpers from prefs
     const existingPrefs = user.prefs || {};
-    // If prefs.passkeys is a stringified JSON, parse it, else if it's an object use it, otherwise init array
-    let passkeys: Array<{ id: string; publicKey: string; counter: number; transports?: string[] }> = [];
-    const raw = (existingPrefs as any).passkeys;
-    if (Array.isArray(raw)) {
-      passkeys = raw;
-    } else if (typeof raw === 'string' && raw.trim().startsWith('[')) {
-      try { passkeys = JSON.parse(raw); } catch { passkeys = []; }
+    const credentials = (existingPrefs.passkey_credentials || '') as string;
+    const counters = (existingPrefs.passkey_counter || '') as string;
+    
+    // Parse existing credentials and counters
+    const credMap = new Map<string, string>();
+    const counterMap = new Map<string, number>();
+    
+    if (credentials) {
+      credentials.split(',').forEach(pair => {
+        const [id, pk] = pair.split(':');
+        if (id && pk) credMap.set(id, pk);
+      });
+    }
+    
+    if (counters) {
+      counters.split(',').forEach(pair => {
+        const [id, cnt] = pair.split(':');
+        if (id && cnt) counterMap.set(id, parseInt(cnt, 10));
+      });
     }
     
     // Add new passkey
-    passkeys.push(passkeyData);
+    credMap.set(passkeyData.id, passkeyData.publicKey);
+    counterMap.set(passkeyData.id, passkeyData.counter);
     
-    // Update user preferences
-    // Store as a proper JSON array, not [object Object]
-    await users.updatePrefs(user.$id, { passkeys });
+    // Serialize back to strings
+    const newCredentials = Array.from(credMap.entries())
+      .map(([id, pk]) => `${id}:${pk}`)
+      .join(',');
+    const newCounters = Array.from(counterMap.entries())
+      .map(([id, cnt]) => `${id}:${cnt}`)
+      .join(',');
+    
+    // Update user preferences with auth helpers
+    await users.updatePrefs(user.$id, { 
+      passkey_credentials: newCredentials,
+      passkey_counter: newCounters
+    });
 
     // Create custom token
     const token = await users.createToken(user.$id, 64, 60);
@@ -115,18 +138,34 @@ export class PasskeyServer {
     // Prepare user
     const user = await this.prepareUser(email);
 
-    // Get stored passkeys
-    const passkeys = user.prefs?.passkeys || [];
+    // Get auth helpers from prefs
+    const credentials = (user.prefs?.passkey_credentials || '') as string;
+    const counters = (user.prefs?.passkey_counter || '') as string;
     
-    if (passkeys.length === 0) {
+    if (!credentials) {
       throw new Error('No passkeys found for user');
     }
-
-    // Find matching passkey
-    const credentialId = assertion.rawId || assertion.id;
-    const passkey = passkeys.find(p => p.id === credentialId);
     
-    if (!passkey) {
+    // Parse credentials and counters
+    const credMap = new Map<string, string>();
+    const counterMap = new Map<string, number>();
+    
+    credentials.split(',').forEach(pair => {
+      const [id, pk] = pair.split(':');
+      if (id && pk) credMap.set(id, pk);
+    });
+    
+    counters.split(',').forEach(pair => {
+      const [id, cnt] = pair.split(':');
+      if (id && cnt) counterMap.set(id, parseInt(cnt, 10));
+    });
+    
+    // Find matching credential
+    const credentialId = assertion.rawId || assertion.id;
+    const publicKey = credMap.get(credentialId);
+    const counter = counterMap.get(credentialId) || 0;
+    
+    if (!publicKey) {
       throw new Error('Unknown credential');
     }
 
@@ -137,9 +176,9 @@ export class PasskeyServer {
       expectedOrigin: opts?.origin || process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
       expectedRPID: opts?.rpID || process.env.NEXT_PUBLIC_RP_ID || 'localhost',
       authenticator: {
-        counter: passkey.counter,
-        credentialID: Buffer.from(passkey.id, 'base64url'),
-        credentialPublicKey: Buffer.from(passkey.publicKey, 'base64url')
+        counter: counter,
+        credentialID: Buffer.from(credentialId, 'base64url'),
+        credentialPublicKey: Buffer.from(publicKey, 'base64url')
       }
     });
 
@@ -147,14 +186,15 @@ export class PasskeyServer {
       throw new Error('Authentication verification failed');
     }
 
-    // Update counter
-    const updatedPasskeys = passkeys.map(p => 
-      p.id === credentialId 
-        ? { ...p, counter: verification.authenticationInfo.newCounter }
-        : p
-    );
+    // Update counter in auth helper
+    const newCounter = verification.authenticationInfo.newCounter || counter;
+    counterMap.set(credentialId, newCounter);
     
-    await users.updatePrefs(user.$id, { passkeys: updatedPasskeys });
+    const newCounters = Array.from(counterMap.entries())
+      .map(([id, cnt]) => `${id}:${cnt}`)
+      .join(',');
+    
+    await users.updatePrefs(user.$id, { passkey_counter: newCounters });
 
     // Create custom token
     const token = await users.createToken(user.$id, 64, 60);
@@ -170,11 +210,19 @@ export class PasskeyServer {
 
   async getPasskeysByEmail(email: string): Promise<Array<{ id: string; publicKey: string; counter: number }>> {
     const user = await this.prepareUser(email);
-    const raw = (user.prefs as any)?.passkeys;
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') {
-      try { return JSON.parse(raw); } catch { return []; }
-    }
-    return [];
+    const credentials = (user.prefs?.passkey_credentials || '') as string;
+    
+    if (!credentials) return [];
+    
+    // Parse credentials into array format for allowCredentials
+    const result: Array<{ id: string; publicKey: string; counter: number }> = [];
+    credentials.split(',').forEach(pair => {
+      const [id, pk] = pair.split(':');
+      if (id && pk) {
+        result.push({ id, publicKey: pk, counter: 0 }); // counter not needed for allowCredentials
+      }
+    });
+    
+    return result;
   }
 }
