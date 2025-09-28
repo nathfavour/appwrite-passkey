@@ -21,8 +21,8 @@ export async function POST(req: Request) {
     const hostNoPort = hostHeader.split(':')[0];
     const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
 
-    // Per simplewebauthn guidance, use a binary user ID (ArrayBuffer/Buffer) instead of a string.
-    // Derive a deterministic binary id from the provided userId (e.g. email) via SHA-256.
+    // Use userId as provided by caller (email) only for label; actual WebAuthn user handle should be Appwrite user $id.
+    // For options we keep the deterministic binary for compatibility; verify route will bind to the server-created user.
     const userIdHash = crypto.createHash('sha256').update(String(userId)).digest();
     const userIdBuffer = new Uint8Array(Buffer.from(userIdHash));
 

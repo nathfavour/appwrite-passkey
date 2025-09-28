@@ -21,25 +21,14 @@ client.setKey(serverApiKey);
 const users = new Users(client);
 
 export class PasskeyServer {
-  private deriveUserId(email: string): string {
-    const hash = crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('base64url');
-    // Ensure <= 36 chars, valid charset, non-special start
-    return `pk_${hash.slice(0, 32)}`;
-  }
-
   async prepareUser(email: string) {
-    const userId = this.deriveUserId(email);
-    // Try deterministic ID first
-    try {
-      return await users.get(userId);
-    } catch {}
-    // Fallback: find by email (in case user was created before)
+    // Find existing by email
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
     if ((usersList as any).users?.length > 0) {
       return (usersList as any).users[0];
     }
-    // Create with deterministic custom ID
-    return await users.create(ID.custom(userId), email);
+    // Create with Appwrite unique ID
+    return await users.create(ID.unique(), email);
   }
 
   async registerPasskey(
@@ -78,43 +67,22 @@ export class PasskeyServer {
 
     // Get existing auth helpers from prefs
     const existingPrefs = user.prefs || {};
-    const credentials = (existingPrefs.passkey_credentials || '') as string;
-    const counters = (existingPrefs.passkey_counter || '') as string;
-    
-    // Parse existing credentials and counters
-    const credMap = new Map<string, string>();
-    const counterMap = new Map<string, number>();
-    
-    if (credentials) {
-      credentials.split(',').forEach(pair => {
-        const [id, pk] = pair.split(':');
-        if (id && pk) credMap.set(id, pk);
-      });
-    }
-    
-    if (counters) {
-      counters.split(',').forEach(pair => {
-        const [id, cnt] = pair.split(':');
-        if (id && cnt) counterMap.set(id, parseInt(cnt, 10));
-      });
-    }
+    const credentialsStr = (existingPrefs.passkey_credentials || '') as string;
+    const countersStr = (existingPrefs.passkey_counter || '') as string;
+
+    // Parse existing credentials and counters (JSON objects stored as strings)
+    const credObj: Record<string, string> = credentialsStr ? (JSON.parse(credentialsStr) as Record<string, string>) : {};
+    const counterObj: Record<string, number> = countersStr ? (JSON.parse(countersStr) as Record<string, number>) : {};
     
     // Add new passkey
-    credMap.set(passkeyData.id, passkeyData.publicKey);
-    counterMap.set(passkeyData.id, passkeyData.counter);
+    credObj[passkeyData.id] = passkeyData.publicKey;
+    counterObj[passkeyData.id] = passkeyData.counter;
     
     // Serialize back to strings
-    const newCredentials = Array.from(credMap.entries())
-      .map(([id, pk]) => `${id}:${pk}`)
-      .join(',');
-    const newCounters = Array.from(counterMap.entries())
-      .map(([id, cnt]) => `${id}:${cnt}`)
-      .join(',');
-    
-    // Update user preferences with auth helpers
+    // Update user preferences with auth helpers as JSON strings
     await users.updatePrefs(user.$id, { 
-      passkey_credentials: newCredentials,
-      passkey_counter: newCounters
+      passkey_credentials: JSON.stringify(credObj),
+      passkey_counter: JSON.stringify(counterObj)
     });
 
     // Create custom token
@@ -139,31 +107,21 @@ export class PasskeyServer {
     const user = await this.prepareUser(email);
 
     // Get auth helpers from prefs
-    const credentials = (user.prefs?.passkey_credentials || '') as string;
-    const counters = (user.prefs?.passkey_counter || '') as string;
-    
-    if (!credentials) {
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const countersStr = (user.prefs?.passkey_counter || '') as string;
+
+    if (!credentialsStr) {
       throw new Error('No passkeys found for user');
     }
     
-    // Parse credentials and counters
-    const credMap = new Map<string, string>();
-    const counterMap = new Map<string, number>();
-    
-    credentials.split(',').forEach(pair => {
-      const [id, pk] = pair.split(':');
-      if (id && pk) credMap.set(id, pk);
-    });
-    
-    counters.split(',').forEach(pair => {
-      const [id, cnt] = pair.split(':');
-      if (id && cnt) counterMap.set(id, parseInt(cnt, 10));
-    });
+    // Parse credentials and counters (JSON strings)
+    const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
+    const counterObj: Record<string, number> = countersStr ? (JSON.parse(countersStr) as Record<string, number>) : {};
     
     // Find matching credential
     const credentialId = assertion.rawId || assertion.id;
-    const publicKey = credMap.get(credentialId);
-    const counter = counterMap.get(credentialId) || 0;
+    const publicKey = credObj[credentialId];
+    const counter = counterObj[credentialId] || 0;
     
     if (!publicKey) {
       throw new Error('Unknown credential');
@@ -188,13 +146,8 @@ export class PasskeyServer {
 
     // Update counter in auth helper
     const newCounter = verification.authenticationInfo.newCounter || counter;
-    counterMap.set(credentialId, newCounter);
-    
-    const newCounters = Array.from(counterMap.entries())
-      .map(([id, cnt]) => `${id}:${cnt}`)
-      .join(',');
-    
-    await users.updatePrefs(user.$id, { passkey_counter: newCounters });
+    counterObj[credentialId] = newCounter;
+    await users.updatePrefs(user.$id, { passkey_counter: JSON.stringify(counterObj) });
 
     // Create custom token
     const token = await users.createToken(user.$id, 64, 60);
@@ -210,19 +163,9 @@ export class PasskeyServer {
 
   async getPasskeysByEmail(email: string): Promise<Array<{ id: string; publicKey: string; counter: number }>> {
     const user = await this.prepareUser(email);
-    const credentials = (user.prefs?.passkey_credentials || '') as string;
-    
-    if (!credentials) return [];
-    
-    // Parse credentials into array format for allowCredentials
-    const result: Array<{ id: string; publicKey: string; counter: number }> = [];
-    credentials.split(',').forEach(pair => {
-      const [id, pk] = pair.split(':');
-      if (id && pk) {
-        result.push({ id, publicKey: pk, counter: 0 }); // counter not needed for allowCredentials
-      }
-    });
-    
-    return result;
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    if (!credentialsStr) return [];
+    const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
+    return Object.entries(credObj).map(([id, pk]) => ({ id, publicKey: pk, counter: 0 }));
   }
 }

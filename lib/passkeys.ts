@@ -80,20 +80,10 @@ export async function getPasskeys(userId: string): Promise<StoredPasskey[]> {
   const user = await fetchUser(userId);
   if (!user) return [];
   const prefs = user.prefs || user.preferences || {};
-  const credentials = (prefs.passkey_credentials || '') as string;
-  
-  if (!credentials) return [];
-  
-  // Parse credentials auth helper into array format
-  const result: StoredPasskey[] = [];
-  credentials.split(',').forEach(pair => {
-    const [id, pk] = pair.split(':');
-    if (id && pk) {
-      result.push({ id, publicKey: pk, counter: 0 }); // counter stored separately
-    }
-  });
-  
-  return result;
+  const credentialsStr = (prefs.passkey_credentials || '') as string;
+  if (!credentialsStr) return [];
+  const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
+  return Object.entries(credObj).map(([id, pk]) => ({ id, publicKey: pk, counter: 0 }));
 }
 
 async function writePasskeys(userId: string, passkeys: StoredPasskey[]) {
