@@ -27,12 +27,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
 
-    // Find credential in preferences
-    const credId = assertion.rawId || assertion.id;
-    const passkeys = await getPasskeys(userId);
-    const credential = passkeys.find(p => p.id === credId);
-    if (!credential) return NextResponse.json({ error: 'Unknown credential' }, { status: 400 });
-
     // Derive expected RP ID and Origin dynamically from request headers, with env overrides
     const url = new URL(req.url);
     const forwardedProto = req.headers.get('x-forwarded-proto');
@@ -52,27 +46,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Malformed assertion: missing response.clientDataJSON' }, { status: 400 });
     }
     const debug = process.env.WEBAUTHN_DEBUG === '1';
-    // Pass assertion fields as received (base64url strings); simplewebauthn decodes internally.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let verification: any;
-    try {
-      verification = await (verifyAuthenticationResponse as any)({
-        response: assertion,
-        expectedChallenge: challenge,
-        expectedOrigin: origin,
-        expectedRPID: rpID,
-        authenticator: {
-          counter: credential.counter,
-          credentialPublicKey: Buffer.from(credential.publicKey, 'base64url'),
-        },
-      });
-    } catch (libErr) {
-      return NextResponse.json({ error: 'WebAuthn library authentication threw', detail: (libErr as Error).message, ...(debug ? { assertionShape: Object.keys(assertion || {}), responseKeys: assertion?.response ? Object.keys(assertion.response) : [] } : {}) }, { status: 400 });
-    }
-
-    if (!verification.verified) {
-      return NextResponse.json({ error: 'Authentication verification failed', ...(debug ? { verification } : {}) }, { status: 400 });
-    }
 
     const server = new PasskeyServer();
     // server.authenticatePasskey will update counter and mint custom token

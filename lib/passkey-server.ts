@@ -133,10 +133,11 @@ export class PasskeyServer {
       expectedChallenge: challenge,
       expectedOrigin: opts?.origin || process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000',
       expectedRPID: opts?.rpID || process.env.NEXT_PUBLIC_RP_ID || 'localhost',
-      authenticator: {
+      // Library expects `credential` object with id/publicKey/counter
+      credential: {
         counter: counter,
-        credentialID: Buffer.from(credentialId, 'base64url'),
-        credentialPublicKey: Buffer.from(publicKey, 'base64url')
+        id: Buffer.from(credentialId, 'base64url'),
+        publicKey: Buffer.from(publicKey, 'base64url'),
       }
     });
 
@@ -144,10 +145,14 @@ export class PasskeyServer {
       throw new Error('Authentication verification failed');
     }
 
-    // Update counter in auth helper
-    const newCounter = verification.authenticationInfo.newCounter || counter;
+    // Update counter in auth helper (guard if missing)
+    const authInfo: any = (verification as any).authenticationInfo;
+    const newCounter = (authInfo && typeof authInfo.newCounter === 'number') ? authInfo.newCounter : counter;
     counterObj[credentialId] = newCounter;
-    await users.updatePrefs(user.$id, { passkey_counter: JSON.stringify(counterObj) });
+    // Merge existing prefs to avoid dropping other keys (e.g., passkey_credentials)
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_counter = JSON.stringify(counterObj);
+    await users.updatePrefs(user.$id, mergedPrefs);
 
     // Create custom token
     const token = await users.createToken(user.$id, 64, 60);
