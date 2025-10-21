@@ -1,15 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+// Global styles will be handled by Material UI's CssBaseline
+// No global styles needed as MUI provides default styling
 
-:root {
-  --background: #fff;
-  --foreground: #111;
-}
-
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-}
