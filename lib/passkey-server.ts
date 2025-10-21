@@ -151,8 +151,11 @@ export class PasskeyServer {
     challenge: string,
     opts?: { rpID?: string; origin?: string }
   ) {
-    // Prepare user
-    const user = await this.prepareUser(email);
+    // Get existing user (do not create)
+    const user = await this.getUserIfExists(email);
+    if (!user) {
+      throw new Error('No passkeys found for user');
+    }
 
     // Get auth helpers from prefs
     const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
@@ -274,7 +277,8 @@ export class PasskeyServer {
   }
 
   async getPasskeysByEmail(email: string): Promise<Array<{ id: string; publicKey: string; counter: number }>> {
-    const user = await this.prepareUser(email);
+    const user = await this.getUserIfExists(email);
+    if (!user) return [];
     const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
     if (!credentialsStr) return [];
     const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
