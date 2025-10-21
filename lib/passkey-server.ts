@@ -237,8 +237,8 @@ export class PasskeyServer {
     mergedPrefs.passkey_counter_history = JSON.stringify(counterHistory);
     
     // Update lastUsedAt in metadata
-    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
-    let metadata: Record<string, any> = metadataStr ? JSON.parse(metadataStr) : {};
+    const metadataStr2 = (user.prefs?.passkey_metadata || '') as string;
+    let metadata: Record<string, any> = metadataStr2 ? JSON.parse(metadataStr2) : {};
     if (!metadata[credentialId]) {
       metadata[credentialId] = {
         name: `Passkey ${new Date().toLocaleDateString()}`,
