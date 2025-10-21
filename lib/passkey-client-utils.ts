@@ -36,11 +36,25 @@ export async function addPasskeyToAccount(email: string) {
 
   const json = publicKeyCredentialToJSON(cred);
 
+  // Get current session to send as Authorization header
+  let authHeader = '';
+  try {
+    const session = await account.getSession('current');
+    if (session && session.secret) {
+      authHeader = `Bearer ${session.secret}`;
+    }
+  } catch {
+    throw new Error('No active session. Please sign in first.');
+  }
+
   const verifyRes = await fetch('/api/webauthn/connect/verify', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': authHeader
+    },
     body: JSON.stringify({ 
-      userId: email, 
+      email: email, 
       attestation: json, 
       challenge: options.challenge, 
       challengeToken: options.challengeToken 
