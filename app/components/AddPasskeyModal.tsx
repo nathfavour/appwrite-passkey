@@ -68,7 +68,7 @@ export default function AddPasskeyModal({
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                <strong>What happens next?</strong> You'll be prompted to use your device's
+                <strong>What happens next?</strong> You&apos;ll be prompted to use your device&apos;s
                 authentication method (Face ID, fingerprint, or security key) to create a new
                 passkey.
               </p>

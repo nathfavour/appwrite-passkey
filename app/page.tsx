@@ -30,7 +30,7 @@ export default function Home() {
           });
           setLoading(false);
         }
-      } catch (err) {
+      } catch {
         router.replace('/login');
       }
     }

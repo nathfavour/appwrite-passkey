@@ -21,7 +21,7 @@ export async function addPasskeyToAccount(email: string) {
 
   const options = await res.json();
 
-  const publicKey: any = { ...options };
+  const publicKey: Record<string, unknown> = { ...options };
   publicKey.challenge = base64UrlToBuffer(options.challenge as string);
   if (publicKey.user?.id) publicKey.user.id = base64UrlToBuffer(options.user.id as string);
   if (publicKey.excludeCredentials) {

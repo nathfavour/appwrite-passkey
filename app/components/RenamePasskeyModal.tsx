@@ -32,9 +32,6 @@ export default function RenamePasskeyModal({
 
   if (!isOpen || !passkey) return null;
 
-  // Initialize name on open
-  const displayName = newName || passkey.name;
-
   const handleRename = async () => {
     if (!newName.trim()) {
       setError('Please enter a name');

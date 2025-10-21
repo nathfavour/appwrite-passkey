@@ -48,7 +48,7 @@ export default function SettingsPage() {
           await loadPasskeys(userData.email);
           setLoading(false);
         }
-      } catch (err) {
+      } catch {
         router.replace('/login');
       }
     }
