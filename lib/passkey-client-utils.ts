@@ -25,9 +25,9 @@ export async function addPasskeyToAccount(email: string) {
   publicKey.challenge = base64UrlToBuffer(options.challenge as string);
   if (publicKey.user?.id) publicKey.user.id = base64UrlToBuffer(options.user.id as string);
   if (publicKey.excludeCredentials) {
-    publicKey.excludeCredentials = publicKey.excludeCredentials.map((c: any) => ({
+    publicKey.excludeCredentials = publicKey.excludeCredentials.map((c: Record<string, unknown>) => ({
       ...c,
-      id: base64UrlToBuffer(c.id),
+      id: base64UrlToBuffer(c.id as string),
     }));
   }
 
