@@ -1,6 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Box,
+  Stack,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Chip,
+  IconButton,
+  AlertTitle,
+  Alert,
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import { deletePasskey, disablePasskey } from '@/lib/passkey-client-utils';
 
 interface Passkey {
@@ -60,81 +75,96 @@ export default function PasskeyList({
 
   if (passkeys.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-          <span className="text-2xl">🔑</span>
-        </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Passkeys Yet</h3>
-        <p className="text-slate-600">Add your first passkey to get started</p>
-      </div>
+      <Box sx={{ textAlign: 'center', py: 6 }}>
+        <Box sx={{ fontSize: 48, mb: 2 }}>🔑</Box>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+          No Passkeys Yet
+        </Typography>
+        <Typography sx={{ color: '#64748b' }}>Add your first passkey to get started</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <Stack spacing={2}>
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+        <Alert severity="error">
+          <AlertTitle>Error</AlertTitle>
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="grid gap-3">
+      <Stack spacing={2}>
         {passkeys.map((passkey) => (
-          <div
-            key={passkey.id}
-            className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md transition-shadow"
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-lg">🔑</span>
-                <h4 className="font-semibold text-slate-900">{passkey.name}</h4>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    passkey.status === 'active'
-                      ? 'bg-green-100 text-green-800'
-                      : passkey.status === 'disabled'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {passkey.status}
-                </span>
-              </div>
-              <div className="text-sm text-slate-500 space-y-1">
-                <p>Created: {new Date(passkey.createdAt).toLocaleDateString()}</p>
-                {passkey.lastUsedAt && (
-                  <p>Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}</p>
-                )}
-              </div>
-            </div>
+          <Card key={passkey.id} sx={{ boxShadow: 1 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Typography sx={{ fontSize: 18 }}>🔑</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {passkey.name}
+                    </Typography>
+                    <Chip
+                      label={passkey.status}
+                      size="small"
+                      color={
+                        passkey.status === 'active'
+                          ? 'success'
+                          : passkey.status === 'disabled'
+                            ? 'warning'
+                            : 'error'
+                      }
+                      variant="outlined"
+                    />
+                  </Box>
+                  <Stack spacing={0.5}>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                      Created: {new Date(passkey.createdAt).toLocaleDateString()}
+                    </Typography>
+                    {passkey.lastUsedAt && (
+                      <Typography variant="caption" sx={{ color: '#64748b' }}>
+                        Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => onRenameClick(passkey)}
-                className="px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                Rename
-              </button>
-              {passkey.status === 'active' && (
-                <button
-                  onClick={() => handleDisable(passkey.id)}
-                  disabled={disabling === passkey.id}
-                  className="px-3 py-2 text-sm font-medium text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {disabling === passkey.id ? 'Disabling...' : 'Disable'}
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(passkey.id)}
-                disabled={deleting === passkey.id}
-                className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {deleting === passkey.id ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
+                <Stack direction="row" spacing={1}>
+                  <IconButton
+                    size="small"
+                    onClick={() => onRenameClick(passkey)}
+                    title="Rename"
+                    sx={{ color: '#2563eb' }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  {passkey.status === 'active' && (
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDisable(passkey.id)}
+                      disabled={disabling === passkey.id}
+                      title="Disable"
+                      sx={{ color: '#f59e0b' }}
+                    >
+                      <DisabledByDefaultIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(passkey.id)}
+                    disabled={deleting === passkey.id}
+                    title="Delete"
+                    sx={{ color: '#ef4444' }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

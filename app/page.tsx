@@ -5,6 +5,17 @@ import { account } from '@/lib/appwrite';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/app/components/Navigation';
 import Link from 'next/link';
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  CircularProgress,
+  Stack,
+} from '@mui/material';
 
 interface UserData {
   email: string;
@@ -40,134 +51,179 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 animate-pulse">
-            <span className="text-2xl">🔐</span>
-          </div>
-          <p className="text-slate-600 font-medium">Loading...</p>
-        </div>
-      </div>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ color: '#2563eb' }} />
+          <Typography sx={{ mt: 2, color: '#64748b' }}>Loading...</Typography>
+        </Box>
+      </Box>
     );
   }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)' }}>
       <Navigation userEmail={user.email} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-            Welcome, {user.name}
-          </h1>
-          <p className="text-xl text-slate-600">
-            Explore the power of passkey authentication with Appwrite
-          </p>
-        </div>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">User ID</p>
-                <p className="text-slate-900 font-semibold text-lg mt-1 break-all">
-                  {user.userId.substring(0, 8)}...
-                </p>
-              </div>
-              <span className="text-3xl">👤</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">Email</p>
-                <p className="text-slate-900 font-semibold text-lg mt-1 break-all">
-                  {user.email}
-                </p>
-              </div>
-              <span className="text-3xl">📧</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-medium">Status</p>
-                <p className="text-slate-900 font-semibold text-lg mt-1">Authenticated</p>
-              </div>
-              <span className="text-3xl">✓</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Highlight */}
-        <div className="bg-white rounded-lg shadow-md border border-slate-200 p-8 mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Passkey Management</h2>
-          <p className="text-slate-600 mb-6">
-            Manage your passkeys in the settings. You can add new passkeys, rename them, and remove
-            old ones. Each passkey is a cryptographic credential that authenticates you without a
-            password.
-          </p>
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 700,
+              background: 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1,
+            }}
           >
-            Go to Settings →
-          </Link>
-        </div>
+            Welcome, {user.name}
+          </Typography>
+          <Typography variant="h6" sx={{ color: '#64748b' }}>
+            Explore the power of passkey authentication with Appwrite
+          </Typography>
+        </Box>
 
-        {/* API Info Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-md border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">📡 Authentication APIs</h3>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <span>/api/webauthn/register/options - Get registration challenge</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <span>/api/webauthn/register/verify - Verify attestation</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <span>/api/webauthn/auth/options - Get authentication challenge</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <span>/api/webauthn/auth/verify - Verify assertion</span>
-              </li>
-            </ul>
-          </div>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', boxShadow: 1 }}>
+              <CardContent>
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                  <Box sx={{ fontSize: 24 }}>👤</Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                      User ID
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all', mt: 0.5 }}>
+                      {user.userId.substring(0, 8)}...
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
 
-          <div className="bg-white rounded-lg shadow-md border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">🔑 Passkey Management APIs</h3>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-600 font-bold">•</span>
-                <span>/api/webauthn/passkeys/list - List user passkeys</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-600 font-bold">•</span>
-                <span>/api/webauthn/passkeys/rename - Rename passkey</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-600 font-bold">•</span>
-                <span>/api/webauthn/passkeys/delete - Delete passkey</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-600 font-bold">•</span>
-                <span>/api/webauthn/passkeys/disable - Disable passkey</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </main>
-    </div>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', boxShadow: 1 }}>
+              <CardContent>
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                  <Box sx={{ fontSize: 24 }}>📧</Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                      Email
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all', mt: 0.5 }}>
+                      {user.email}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Card sx={{ height: '100%', boxShadow: 1 }}>
+              <CardContent>
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                  <Box sx={{ fontSize: 24 }}>✓</Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                      Status
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
+                      Authenticated
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Card sx={{ mb: 4, boxShadow: 1 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+              Passkey Management
+            </Typography>
+            <Typography sx={{ color: '#64748b', mb: 3 }}>
+              Manage your passkeys in the settings. You can add new passkeys, rename them, and remove old ones. Each passkey is a cryptographic credential that authenticates you without a password.
+            </Typography>
+            <Link href="/settings" style={{ textDecoration: 'none' }}>
+              <Button
+                variant="contained"
+                sx={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%)',
+                  },
+                }}
+              >
+                Go to Settings →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ boxShadow: 1 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  📡 Authentication APIs
+                </Typography>
+                <Stack spacing={1}>
+                  {[
+                    '/api/webauthn/register/options - Get registration challenge',
+                    '/api/webauthn/register/verify - Verify attestation',
+                    '/api/webauthn/auth/options - Get authentication challenge',
+                    '/api/webauthn/auth/verify - Verify assertion',
+                  ].map((item, idx) => (
+                    <Typography key={idx} variant="body2" sx={{ color: '#64748b', display: 'flex', gap: 1 }}>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold' }}>•</span>
+                      {item}
+                    </Typography>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card sx={{ boxShadow: 1 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  🔑 Passkey Management APIs
+                </Typography>
+                <Stack spacing={1}>
+                  {[
+                    '/api/webauthn/passkeys/list - List user passkeys',
+                    '/api/webauthn/passkeys/rename - Rename passkey',
+                    '/api/webauthn/passkeys/delete - Delete passkey',
+                    '/api/webauthn/passkeys/disable - Disable passkey',
+                  ].map((item, idx) => (
+                    <Typography key={idx} variant="body2" sx={{ color: '#64748b', display: 'flex', gap: 1 }}>
+                      <span style={{ color: '#4f46e5', fontWeight: 'bold' }}>•</span>
+                      {item}
+                    </Typography>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 }

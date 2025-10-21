@@ -8,6 +8,20 @@ import PasskeyList from '@/app/components/PasskeyList';
 import AddPasskeyModal from '@/app/components/AddPasskeyModal';
 import RenamePasskeyModal from '@/app/components/RenamePasskeyModal';
 import { listPasskeys } from '@/lib/passkey-client-utils';
+import {
+  Container,
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  CircularProgress,
+  Stack,
+  Grid,
+  Alert,
+  AlertTitle,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 
 interface UserData {
   email: string;
@@ -89,112 +103,175 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 animate-pulse">
-            <span className="text-2xl">⚙️</span>
-          </div>
-          <p className="text-slate-600 font-medium">Loading settings...</p>
-        </div>
-      </div>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ color: '#2563eb' }} />
+          <Typography sx={{ mt: 2, color: '#64748b' }}>Loading settings...</Typography>
+        </Box>
+      </Box>
     );
   }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)' }}>
       <Navigation userEmail={user.email} />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">Settings</h1>
-          <p className="text-slate-600">Manage your account and passkeys</p>
-        </div>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+            Settings
+          </Typography>
+          <Typography sx={{ color: '#64748b' }}>Manage your account and passkeys</Typography>
+        </Box>
 
         {/* Account Section */}
-        <div className="bg-white rounded-lg shadow-md border border-slate-200 p-8 mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Account Information</h2>
+        <Card sx={{ mb: 4, boxShadow: 1 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+              Account Information
+            </Typography>
 
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Email</label>
-              <p className="text-lg text-slate-900 font-semibold">{user.email}</p>
-            </div>
+            <Stack spacing={3}>
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#64748b', mb: 1 }}>
+                  Email
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {user.email}
+                </Typography>
+              </Box>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">User ID</label>
-              <p className="text-sm font-mono text-slate-600 break-all bg-slate-50 p-3 rounded border border-slate-200">
-                {user.userId}
-              </p>
-            </div>
-          </div>
-        </div>
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#64748b', mb: 1 }}>
+                  User ID
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: 'monospace',
+                    color: '#64748b',
+                    backgroundColor: '#f1f5f9',
+                    p: 1.5,
+                    borderRadius: 1,
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {user.userId}
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
 
         {/* Passkey Management Section */}
-        <div className="bg-white rounded-lg shadow-md border border-slate-200 p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Passkey Management</h2>
-              <p className="text-slate-600 mt-2">
-                Add, rename, or delete passkeys to manage your authentication methods
-              </p>
-            </div>
-            <button
-              onClick={() => setAddModalOpen(true)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg whitespace-nowrap"
-            >
-              + Add Passkey
-            </button>
-          </div>
+        <Card sx={{ boxShadow: 1 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Passkey Management
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
+                  Add, rename, or delete passkeys to manage your authentication methods
+                </Typography>
+              </Box>
+              <Button
+                onClick={() => setAddModalOpen(true)}
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%)',
+                  },
+                }}
+              >
+                Add Passkey
+              </Button>
+            </Box>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-              {error}
-            </div>
-          )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <AlertTitle>Error</AlertTitle>
+                {error}
+              </Alert>
+            )}
 
-          {loadingPasskeys ? (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3 animate-pulse">
-                <span className="text-xl">🔑</span>
-              </div>
-              <p className="text-slate-600">Loading your passkeys...</p>
-            </div>
-          ) : (
-            <PasskeyList
-              passkeys={passkeys}
-              email={user.email}
-              onUpdate={() => loadPasskeys(user.email)}
-              onRenameClick={handleRenameClick}
-            />
-          )}
-        </div>
+            {loadingPasskeys ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress size={40} sx={{ color: '#2563eb' }} />
+                <Typography sx={{ mt: 2, color: '#64748b' }}>Loading your passkeys...</Typography>
+              </Box>
+            ) : (
+              <PasskeyList
+                passkeys={passkeys}
+                email={user.email}
+                onUpdate={() => loadPasskeys(user.email)}
+                onRenameClick={handleRenameClick}
+              />
+            )}
+          </CardContent>
+        </Card>
 
         {/* API Reference Section */}
-        <div className="mt-8 bg-slate-800 rounded-lg shadow-md p-8 text-white">
-          <h3 className="text-lg font-bold mb-4">🔌 API Endpoints Used</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="font-semibold mb-2">On this page:</p>
-              <ul className="space-y-1 text-slate-300">
-                <li>✓ GET /api/webauthn/passkeys/list</li>
-                <li>✓ POST /api/webauthn/passkeys/rename</li>
-                <li>✓ POST /api/webauthn/passkeys/delete</li>
-                <li>✓ POST /api/webauthn/passkeys/disable</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold mb-2">When adding passkey:</p>
-              <ul className="space-y-1 text-slate-300">
-                <li>✓ POST /api/webauthn/connect/options</li>
-                <li>✓ POST /api/webauthn/connect/verify</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </main>
+        <Card sx={{ mt: 4, backgroundColor: '#1e293b', color: 'white', boxShadow: 1 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              🔌 API Endpoints Used
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    On this page:
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {[
+                      'GET /api/webauthn/passkeys/list',
+                      'POST /api/webauthn/passkeys/rename',
+                      'POST /api/webauthn/passkeys/delete',
+                      'POST /api/webauthn/passkeys/disable',
+                    ].map((endpoint, idx) => (
+                      <Typography key={idx} variant="body2" sx={{ color: '#e2e8f0' }}>
+                        ✓ {endpoint}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    When adding passkey:
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {[
+                      'POST /api/webauthn/connect/options',
+                      'POST /api/webauthn/connect/verify',
+                    ].map((endpoint, idx) => (
+                      <Typography key={idx} variant="body2" sx={{ color: '#e2e8f0' }}>
+                        ✓ {endpoint}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Container>
 
       <AddPasskeyModal
         isOpen={addModalOpen}
@@ -213,6 +290,6 @@ export default function SettingsPage() {
         }}
         onSuccess={handleRenameSuccess}
       />
-    </div>
+    </Box>
   );
 }

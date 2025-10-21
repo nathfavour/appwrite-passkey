@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import '@/app/globals.css';
 
 export const metadata: Metadata = {
   title: 'Appwrite Passkey Demo',

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AuthForm from '../components/AuthForm';
 import { Client, Account } from 'appwrite';
 import Link from 'next/link';
+import { Box, Typography, Grid, Stack } from '@mui/material';
 
 
 const client = new Client();
@@ -320,72 +321,101 @@ export default function LoginPage() {
   // Wire the one-button flow to the primary action; keep register action available to avoid breaking existing flows
   // Single-button mode: only provide onPasskeyAction so the form renders a single "Continue with Passkey" button
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)' }}>
       {/* Header with Logo */}
-      <div className="p-6">
-        <Link href="/" className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">🔐</span>
-          </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+      <Box sx={{ p: 2 }}>
+        <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>🔐</span>
+          </Box>
+          <Typography
+            sx={{
+              fontSize: 18,
+              fontWeight: 700,
+              background: 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Passkey Demo
-          </span>
+          </Typography>
         </Link>
-      </div>
+      </Box>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Side - Info */}
-          <div className="hidden lg:block">
-            <h1 className="text-5xl font-bold text-slate-900 mb-6 leading-tight">
-              Secure Authentication with <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Passkeys</span>
-            </h1>
-            <p className="text-lg text-slate-600 mb-8">
-              Experience the future of authentication. Faster, more secure, and simpler than passwords.
-            </p>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2, py: 3 }}>
+        <Box sx={{ width: '100%', maxWidth: 1200 }}>
+          <Grid container spacing={4} alignItems="center">
+            {/* Left Side - Info */}
+            <Grid item xs={12} lg={6} sx={{ display: { xs: 'none', lg: 'block' } }}>
+              <Box>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Secure Authentication with{' '}
+                  <Box
+                    component="span"
+                    sx={{
+                      background: 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    Passkeys
+                  </Box>
+                </Typography>
+                <Typography variant="h6" sx={{ color: '#64748b', mb: 4 }}>
+                  Experience the future of authentication. Faster, more secure, and simpler than passwords.
+                </Typography>
 
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <span className="flex-shrink-0 text-2xl">🔐</span>
-                <div>
-                  <h3 className="font-semibold text-slate-900">End-to-End Encrypted</h3>
-                  <p className="text-slate-600 text-sm">Your keys never leave your device</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <span className="flex-shrink-0 text-2xl">⚡</span>
-                <div>
-                  <h3 className="font-semibold text-slate-900">One-Click Login</h3>
-                  <p className="text-slate-600 text-sm">No passwords to remember or type</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <span className="flex-shrink-0 text-2xl">🛡️</span>
-                <div>
-                  <h3 className="font-semibold text-slate-900">Phishing Resistant</h3>
-                  <p className="text-slate-600 text-sm">Cryptographic authentication</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <span className="flex-shrink-0 text-2xl">📱</span>
-                <div>
-                  <h3 className="font-semibold text-slate-900">Multi-Device</h3>
-                  <p className="text-slate-600 text-sm">Add and manage multiple passkeys</p>
-                </div>
-              </div>
-            </div>
+                <Stack spacing={2}>
+                  {[
+                    { icon: '🔐', title: 'End-to-End Encrypted', desc: 'Your keys never leave your device' },
+                    { icon: '⚡', title: 'One-Click Login', desc: 'No passwords to remember or type' },
+                    { icon: '🛡️', title: 'Phishing Resistant', desc: 'Cryptographic authentication' },
+                    { icon: '📱', title: 'Multi-Device', desc: 'Add and manage multiple passkeys' },
+                  ].map((item, idx) => (
+                    <Box key={idx} sx={{ display: 'flex', gap: 2 }}>
+                      <Box sx={{ fontSize: 24, flex: 'none' }}>{item.icon}</Box>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, color: '#1e293b' }}>
+                          {item.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#64748b' }}>
+                          {item.desc}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
 
-            <div className="mt-8 pt-8 border-t border-slate-200">
-              <p className="text-sm text-slate-600 mb-4">
-                <strong>Demo Features:</strong> Register with passkey, authenticate, add multiple passkeys, rename, delete, and disable them.
-              </p>
-            </div>
-          </div>
+                <Box sx={{ mt: 4, pt: 4, borderTop: '1px solid #e2e8f0' }}>
+                  <Typography variant="body2" sx={{ color: '#64748b' }}>
+                    <strong style={{ color: '#1e293b' }}>Demo Features:</strong> Register with passkey, authenticate, add multiple passkeys, rename, delete, and disable them.
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
 
-          {/* Right Side - Form */}
-          <div className="flex justify-center">
-            <div className="w-full max-w-md">
+            {/* Right Side - Form */}
+            <Grid item xs={12} lg={6} sx={{ display: 'flex', justifyContent: 'center' }}>
               <AuthForm
                 email={email}
                 onEmailChangeAction={setEmail}
@@ -393,15 +423,17 @@ export default function LoginPage() {
                 loading={loading}
                 message={message}
               />
-            </div>
-          </div>
-        </div>
-      </div>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
 
       {/* Footer */}
-      <div className="text-center py-6 text-sm text-slate-500 border-t border-slate-200">
-        <p>Appwrite Passkey Demo • Built with Next.js & WebAuthn</p>
-      </div>
-    </div>
+      <Box sx={{ textAlign: 'center', py: 2, borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: 12 }}>
+        <Typography variant="caption">
+          Appwrite Passkey Demo • Built with Next.js & WebAuthn
+        </Typography>
+      </Box>
+    </Box>
   );
 }

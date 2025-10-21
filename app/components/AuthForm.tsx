@@ -1,6 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  Alert,
+  CircularProgress,
+} from '@mui/material';
 
 type Props = {
   email: string;
@@ -37,85 +48,106 @@ export default function AuthForm({
   const isError = message?.toLowerCase().includes('error') || message?.toLowerCase().includes('fail');
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-lg shadow-xl border border-slate-200 p-8 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            {singleMode ? 'Passkey Authentication' : mode === 'register' ? 'Register Passkey' : 'Sign In'}
-          </h1>
-          <p className="text-slate-600 text-sm">
-            {singleMode
-              ? 'Continue with your device passkey'
-              : mode === 'register'
-                ? 'Create a passkey bound to your device'
-                : 'Authenticate with an existing passkey'}
-          </p>
-        </div>
+    <Box sx={{ width: '100%', maxWidth: 400 }}>
+      <Card sx={{ boxShadow: 2 }}>
+        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+              {singleMode ? 'Passkey Authentication' : mode === 'register' ? 'Register Passkey' : 'Sign In'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748b' }}>
+              {singleMode
+                ? 'Continue with your device passkey'
+                : mode === 'register'
+                  ? 'Create a passkey bound to your device'
+                  : 'Authenticate with an existing passkey'}
+            </Typography>
+          </Box>
 
-        {/* Email Input */}
-        <div>
-          <label className="block text-sm font-medium text-slate-900 mb-2">
-            Email (User ID)
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => onEmailChangeAction(e.target.value.trim())}
-            placeholder="you@example.com"
-            autoComplete="username"
-            disabled={loading}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
-          />
-        </div>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Email (User ID)
+              </Typography>
+              <TextField
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChangeAction(e.target.value.trim())}
+                placeholder="you@example.com"
+                autoComplete="username"
+                disabled={loading}
+                fullWidth
+                variant="outlined"
+                size="small"
+              />
+            </Box>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={primaryAction}
-            disabled={loading || (mode === 'register' && !onRegisterAction)}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-          >
-            {loading ? 'Please wait…' : primaryLabel}
-          </button>
+            <Stack spacing={1}>
+              <Button
+                onClick={primaryAction}
+                disabled={loading || (mode === 'register' && !onRegisterAction)}
+                variant="contained"
+                fullWidth
+                sx={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  py: 1.5,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%)',
+                  },
+                }}
+              >
+                {loading ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
+                    Please wait...
+                  </>
+                ) : (
+                  primaryLabel
+                )}
+              </Button>
 
-          {onRegisterAction && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setMode(mode === 'register' ? 'signin' : 'register')}
-              className="w-full px-4 py-2 border border-slate-300 text-slate-900 font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              {switchLabel}
-            </button>
-          )}
-        </div>
+              {onRegisterAction && (
+                <Button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setMode(mode === 'register' ? 'signin' : 'register')}
+                  variant="outlined"
+                  fullWidth
+                  sx={{
+                    color: '#334155',
+                    borderColor: '#cbd5e1',
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: '#f1f5f9',
+                    },
+                  }}
+                >
+                  {switchLabel}
+                </Button>
+              )}
+            </Stack>
 
-        {/* Info Text */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-slate-700">
-          <strong className="text-slate-900">How it works:</strong>
-          <div className="mt-2 text-xs text-slate-600">
-            {mode === 'register' ? (
-              <p>Your browser will generate a cryptographic credential stored securely on your device. This credential is used for future authentication.</p>
-            ) : (
-              <p>Your device will verify ownership of your passkey through biometric or PIN authentication, creating a signed challenge response.</p>
+            <Alert severity="info">
+              <Typography variant="caption">
+                <strong>How it works:</strong>
+              </Typography>
+              <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                {mode === 'register'
+                  ? 'Your browser will generate a cryptographic credential stored securely on your device. This credential is used for future authentication.'
+                  : 'Your device will verify ownership of your passkey through biometric or PIN authentication, creating a signed challenge response.'}
+              </Typography>
+            </Alert>
+
+            {message && (
+              <Alert severity={isError ? 'error' : 'success'}>
+                <Typography variant="body2">{message}</Typography>
+              </Alert>
             )}
-          </div>
-        </div>
-
-        {/* Messages */}
-        {message && (
-          <div
-            className={`p-4 rounded-lg text-sm ${
-              isError
-                ? 'bg-red-50 border border-red-200 text-red-800'
-                : 'bg-green-50 border border-green-200 text-green-800'
-            }`}
-          >
-            {message}
-          </div>
-        )}
-      </div>
-    </div>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
