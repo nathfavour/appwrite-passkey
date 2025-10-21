@@ -43,3 +43,9 @@ next-env.d.ts
 appwrite.sample.json
 
 ignore1/
+# Added by Autocommiter: ensure *.env*
+*.env*
+# Added by Autocommiter: ensure docx/
+docx/
+# Added by Autocommiter: ensure .docx/
+.docx/
