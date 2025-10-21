@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthForm from '../components/AuthForm';
 import { Client, Account } from 'appwrite';
+import Link from 'next/link';
 
 
 const client = new Client();
@@ -318,5 +319,89 @@ export default function LoginPage() {
 
   // Wire the one-button flow to the primary action; keep register action available to avoid breaking existing flows
   // Single-button mode: only provide onPasskeyAction so the form renders a single "Continue with Passkey" button
-  return <AuthForm email={email} onEmailChangeAction={setEmail} onPasskeyAction={continueWithPasskey} loading={loading} message={message} />;
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
+      {/* Header with Logo */}
+      <div className="p-6">
+        <Link href="/" className="inline-flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">🔐</span>
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Passkey Demo
+          </span>
+        </Link>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left Side - Info */}
+          <div className="hidden lg:block">
+            <h1 className="text-5xl font-bold text-slate-900 mb-6 leading-tight">
+              Secure Authentication with <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Passkeys</span>
+            </h1>
+            <p className="text-lg text-slate-600 mb-8">
+              Experience the future of authentication. Faster, more secure, and simpler than passwords.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 text-2xl">🔐</span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">End-to-End Encrypted</h3>
+                  <p className="text-slate-600 text-sm">Your keys never leave your device</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 text-2xl">⚡</span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">One-Click Login</h3>
+                  <p className="text-slate-600 text-sm">No passwords to remember or type</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 text-2xl">🛡️</span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Phishing Resistant</h3>
+                  <p className="text-slate-600 text-sm">Cryptographic authentication</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 text-2xl">📱</span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Multi-Device</h3>
+                  <p className="text-slate-600 text-sm">Add and manage multiple passkeys</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-200">
+              <p className="text-sm text-slate-600 mb-4">
+                <strong>Demo Features:</strong> Register with passkey, authenticate, add multiple passkeys, rename, delete, and disable them.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Side - Form */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-md">
+              <AuthForm
+                email={email}
+                onEmailChangeAction={setEmail}
+                onPasskeyAction={continueWithPasskey}
+                loading={loading}
+                message={message}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-6 text-sm text-slate-500 border-t border-slate-200">
+        <p>Appwrite Passkey Demo • Built with Next.js & WebAuthn</p>
+      </div>
+    </div>
+  );
 }

@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 
 type Props = {
   email: string;
   onEmailChangeAction: (value: string) => void;
-  onPasskeyAction: () => Promise<void> | void; // sign in handler
-  onRegisterAction?: () => Promise<void> | void; // register handler
+  onPasskeyAction: () => Promise<void> | void;
+  onRegisterAction?: () => Promise<void> | void;
   loading?: boolean;
   message?: string | null;
 };
@@ -34,125 +34,88 @@ export default function AuthForm({
       : 'Sign In with Passkey';
   const switchLabel = mode === 'register' ? 'Have a passkey? Sign in' : 'Need a passkey? Register';
 
-  return (
-    <main style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 560,
-          background: 'linear-gradient(180deg,#f6fbff,#ffffff)',
-          border: '1px solid #dbeeff',
-          borderRadius: 14,
-          padding: 28,
-          boxShadow: '0 8px 30px rgba(14,42,80,0.06)',
-        }}
-      >
-        <header style={{ marginBottom: 20 }}>
-          <h1 style={{ margin: 0, marginBottom: 6, color: '#0f172a', fontSize: 24 }}>
-            {singleMode ? 'Passkey' : mode === 'register' ? 'Register a New Passkey' : 'Passkey Sign In'}
-          </h1>
-          <p style={{ margin: 0, color: '#1e3a8a', fontSize: 14 }}>
-            {singleMode
-              ? 'Use a single button to sign in or register with your device passkey.'
-              : mode === 'register'
-                ? 'Create a passkey bound to your device (WebAuthn).'
-                : 'Authenticate using an existing passkey.'}
-          </p>
-        </header>
+  const isError = message?.toLowerCase().includes('error') || message?.toLowerCase().includes('fail');
 
-        <label style={{ display: 'block', marginBottom: 16, color: '#0f172a' }}>
-          <div style={{ marginBottom: 6, fontSize: 14, fontWeight: 500 }}>Email (used as userId)</div>
+  return (
+    <div className="w-full max-w-md">
+      <div className="bg-white rounded-lg shadow-xl border border-slate-200 p-8 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            {singleMode ? 'Passkey Authentication' : mode === 'register' ? 'Register Passkey' : 'Sign In'}
+          </h1>
+          <p className="text-slate-600 text-sm">
+            {singleMode
+              ? 'Continue with your device passkey'
+              : mode === 'register'
+                ? 'Create a passkey bound to your device'
+                : 'Authenticate with an existing passkey'}
+          </p>
+        </div>
+
+        {/* Email Input */}
+        <div>
+          <label className="block text-sm font-medium text-slate-900 mb-2">
+            Email (User ID)
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => onEmailChangeAction(e.target.value.trim())}
             placeholder="you@example.com"
             autoComplete="username"
-            style={{
-              width: '100%',
-              padding: '11px 14px',
-              borderRadius: 8,
-              border: '1px solid #cfe4ff',
-              background: '#fff',
-              outline: 'none',
-              fontSize: 14,
-            }}
             disabled={loading}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
           />
-        </label>
+        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3">
           <button
             onClick={primaryAction}
             disabled={loading || (mode === 'register' && !onRegisterAction)}
-            style={{
-              padding: '12px 16px',
-              background: mode === 'register' ? '#6366f1' : '#0ea5e9',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: 14,
-              letterSpacing: 0.3,
-              boxShadow: 'inset 0 -2px 0 rgba(0,0,0,0.08)',
-              transition: 'background .15s',
-              opacity: loading ? 0.7 : 1,
-            }}
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
           >
             {loading ? 'Please wait…' : primaryLabel}
           </button>
 
-            {onRegisterAction && (
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => setMode(mode === 'register' ? 'signin' : 'register')}
-                style={{
-                  padding: '10px 14px',
-                  background: '#eef6ff',
-                  color: '#0f172a',
-                  border: '1px solid #cfe4ff',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  fontSize: 13,
-                }}
-              >
-                {switchLabel}
-              </button>
-            )}
+          {onRegisterAction && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => setMode(mode === 'register' ? 'signin' : 'register')}
+              className="w-full px-4 py-2 border border-slate-300 text-slate-900 font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {switchLabel}
+            </button>
+          )}
         </div>
 
-        <section style={{ marginTop: 18, fontSize: 12, lineHeight: 1.5, color: '#1e293b' }}>
-          {mode === 'register' ? (
-            <>
-              <strong style={{ color: '#0f172a' }}>Registration flow:</strong> We generate options & challenge → your browser creates a credential → we verify attestation → passkey is stored. We DO NOT sign you in automatically here; use the sign‑in mode after registering.
-            </>
-          ) : (
-            <>
-              <strong style={{ color: '#0f172a' }}>Sign-in flow:</strong> We fetch your registered credential IDs → browser performs an assertion → we verify challenge + signature → session established if token exchange succeeds.
-            </>
-          )}
-        </section>
+        {/* Info Text */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-slate-700">
+          <strong className="text-slate-900">How it works:</strong>
+          <div className="mt-2 text-xs text-slate-600">
+            {mode === 'register' ? (
+              <p>Your browser will generate a cryptographic credential stored securely on your device. This credential is used for future authentication.</p>
+            ) : (
+              <p>Your device will verify ownership of your passkey through biometric or PIN authentication, creating a signed challenge response.</p>
+            )}
+          </div>
+        </div>
 
+        {/* Messages */}
         {message && (
           <div
-            style={{
-              marginTop: 16,
-              padding: '10px 12px',
-              borderRadius: 8,
-              fontSize: 13,
-              background: message.toLowerCase().includes('error') || message.toLowerCase().includes('fail') ? '#fee2e2' : '#ecfdf5',
-              color: message.toLowerCase().includes('error') || message.toLowerCase().includes('fail') ? '#b91c1c' : '#065f46',
-              border: '1px solid ' + (message.toLowerCase().includes('error') || message.toLowerCase().includes('fail') ? '#fecaca' : '#a7f3d0'),
-              whiteSpace: 'pre-wrap',
-            }}
+            className={`p-4 rounded-lg text-sm ${
+              isError
+                ? 'bg-red-50 border border-red-200 text-red-800'
+                : 'bg-green-50 border border-green-200 text-green-800'
+            }`}
           >
             {message}
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }
