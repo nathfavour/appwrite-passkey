@@ -18,7 +18,12 @@ export async function POST(req: Request) {
     const { PasskeyServer } = await import('../../../../../lib/passkey-server');
     const gate = new PasskeyServer();
     if (await gate.shouldBlockPasskeyForEmail(userId)) {
-      return NextResponse.json({ error: 'Account already exists' }, { status: 403 });
+      // Check if the account has a wallet preference
+      const hasWallet = await gate.hasWalletPreference(userId);
+      const errorMessage = hasWallet 
+        ? 'Account already connected with wallet'
+        : 'Account already exists';
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
     // Prefer dynamic RP based on host header for dev/proxy environments
     const url = new URL(req.url);

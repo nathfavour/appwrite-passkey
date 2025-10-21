@@ -46,6 +46,14 @@ export class PasskeyServer {
     // (whether it has wallet or any other auth method)
     return !hasPasskeys;
   }
+
+  async hasWalletPreference(email: string): Promise<boolean> {
+    const user = await this.getUserIfExists(email);
+    if (!user) return false;
+    // Check if user has any wallet-related preference keys
+    const prefs = user.prefs || {};
+    return Object.keys(prefs).some(key => key.startsWith('wallet'));
+  }
   async prepareUser(email: string) {
     // Find existing by email
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
