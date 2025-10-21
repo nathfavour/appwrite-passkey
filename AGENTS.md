@@ -1,0 +1,1 @@
+Important: first of all, stop creating indiscriminate markdown files except explicitly told to. write only code and nothing else.
