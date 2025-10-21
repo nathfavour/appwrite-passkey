@@ -16,6 +16,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { deletePasskey, disablePasskey, enablePasskey } from '@/lib/passkey-client-utils';
 
 interface Passkey {
@@ -71,6 +72,19 @@ export default function PasskeyList({
       setError((err as Error).message);
     } finally {
       setDisabling(null);
+    }
+  };
+
+  const handleEnable = async (credentialId: string) => {
+    setEnabling(credentialId);
+    setError(null);
+    try {
+      await enablePasskey(email, credentialId);
+      await onUpdate();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setEnabling(null);
     }
   };
 
@@ -149,6 +163,17 @@ export default function PasskeyList({
                       sx={{ color: '#f59e0b' }}
                     >
                       <DisabledByDefaultIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                  {passkey.status === 'disabled' && (
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEnable(passkey.id)}
+                      disabled={enabling === passkey.id}
+                      title="Enable"
+                      sx={{ color: '#10b981' }}
+                    >
+                      <CheckCircleIcon fontSize="small" />
                     </IconButton>
                   )}
                   <IconButton
