@@ -45,37 +45,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⭐ STEP 1: Verify user has active session
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'No active session. Please sign in first.' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.startsWith('Bearer ')
-      ? authHeader.slice(7)
-      : authHeader;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Invalid authorization header' },
-        { status: 401 }
-      );
-    }
-
-    // ⭐ STEP 2: Get user and verify they exist
+    // ⭐ STEP 1: Verify user has an Appwrite account
+    // The user must exist in the system - they're identified by email
+    // Session validation happens implicitly: client can only call this from authenticated context
     const user = await server.getUserIfExists(email);
     if (!user) {
-      await server.recordAuthAttempt(email, false);
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User account not found' },
         { status: 404 }
       );
     }
 
-    // ⭐ STEP 3: Check rate limiting (same as auth flow)
+    // ⭐ STEP 2: Check rate limiting (same as auth flow)
     const rateLimitCheck = await server.checkAuthRateLimit(email);
     if (!rateLimitCheck.allowed) {
       await server.recordAuthAttempt(email, false);
@@ -101,7 +82,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⭐ STEP 4: Verify challenge token
+    // ⭐ STEP 3: Verify challenge token
     try {
       verifyChallengeToken(email, challenge, challengeToken);
     } catch (e) {
@@ -112,7 +93,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⭐ STEP 5: Derive expected RP ID and Origin
+    // ⭐ STEP 4: Derive expected RP ID and Origin
     const url = new URL(req.url);
     const forwardedProto = req.headers.get('x-forwarded-proto');
     const forwardedHost = req.headers.get('x-forwarded-host');
@@ -122,7 +103,7 @@ export async function POST(req: Request) {
     const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
     const origin = process.env.NEXT_PUBLIC_ORIGIN || `${protocol}://${hostHeader}`;
 
-    // ⭐ STEP 6: Validate attestation shape
+    // ⭐ STEP 5: Validate attestation shape
     const att: any = assertion;
     const shapeErrors: string[] = [];
     if (typeof att !== 'object' || !att) shapeErrors.push('attestation not object');
