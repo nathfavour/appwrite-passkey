@@ -118,8 +118,9 @@ export class PasskeyServer {
     // Initialize metadata for new passkey
     const metadataStr = (existingPrefs.passkey_metadata || '') as string;
     let metadataObj: Record<string, any> = metadataStr ? JSON.parse(metadataStr) : {};
+    const timeStr = this.formatTimestamp(Date.now());
     metadataObj[passkeyData.id] = {
-      name: `Passkey ${new Date().toLocaleDateString()}`,
+      name: `Passkey ${timeStr}`,
       createdAt: Date.now(),
       lastUsedAt: null,
       status: 'active'
@@ -251,8 +252,9 @@ export class PasskeyServer {
     const metadataStr2 = (user.prefs?.passkey_metadata || '') as string;
     let metadata: Record<string, any> = metadataStr2 ? JSON.parse(metadataStr2) : {};
     if (!metadata[credentialId]) {
+      const timeStr = this.formatTimestamp(Date.now());
       metadata[credentialId] = {
-        name: `Passkey ${new Date().toLocaleDateString()}`,
+        name: `Passkey ${timeStr}`,
         createdAt: Date.now(),
         lastUsedAt: Date.now(),
         status: 'active'
@@ -294,12 +296,28 @@ export class PasskeyServer {
   }
 
   /**
+   * Format timestamp to human-readable string (MM/DD/YYYY, HH:MM:SS)
+   */
+  private formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+  }
+
+  /**
    * Initialize metadata for a new passkey if not exists
    */
   private initializeMetadata(credentialId: string, metadata: Record<string, any> = {}): any {
     if (metadata[credentialId]) return metadata;
+    const timeStr = this.formatTimestamp(Date.now());
     metadata[credentialId] = {
-      name: `Passkey ${new Date().toLocaleDateString()}`,
+      name: `Passkey ${timeStr}`,
       createdAt: Date.now(),
       lastUsedAt: null,
       status: 'active'
@@ -330,7 +348,7 @@ export class PasskeyServer {
       const meta = metadata[id] || this.initializeMetadata(id, {})[id];
       return {
         id,
-        name: meta.name || `Passkey ${new Date(meta.createdAt || 0).toLocaleDateString()}`,
+        name: meta.name || `Passkey ${this.formatTimestamp(meta.createdAt || 0)}`,
         createdAt: meta.createdAt || Date.now(),
         lastUsedAt: meta.lastUsedAt || null,
         status: meta.status || 'active'
@@ -360,7 +378,7 @@ export class PasskeyServer {
 
     return {
       id: credentialId,
-      name: meta.name || `Passkey ${new Date(meta.createdAt || 0).toLocaleDateString()}`,
+      name: meta.name || `Passkey ${this.formatTimestamp(meta.createdAt || 0)}`,
       createdAt: meta.createdAt || Date.now(),
       lastUsedAt: meta.lastUsedAt || null,
       status: meta.status || 'active'
@@ -412,6 +430,28 @@ export class PasskeyServer {
     let metadata = this.parseMetadata(metadataStr);
     metadata = this.initializeMetadata(credentialId, metadata);
     metadata[credentialId].status = 'disabled';
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
+  }
+
+  /**
+   * Enable a previously disabled passkey
+   */
+  async enablePasskey(email: string, credentialId: string): Promise<void> {
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const credObj: Record<string, string> = JSON.parse(credentialsStr || '{}') as Record<string, string>;
+
+    if (!credObj[credentialId]) {
+      throw new Error('Passkey not found');
+    }
+
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    let metadata = this.parseMetadata(metadataStr);
+    metadata = this.initializeMetadata(credentialId, metadata);
+    metadata[credentialId].status = 'active';
 
     const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
     mergedPrefs.passkey_metadata = JSON.stringify(metadata);

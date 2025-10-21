@@ -112,6 +112,21 @@ export async function disablePasskey(email: string, credentialId: string) {
   return res.json();
 }
 
+export async function enablePasskey(email: string, credentialId: string) {
+  const res = await fetch('/api/webauthn/passkeys/enable', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, credentialId }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to enable passkey');
+  }
+
+  return res.json();
+}
+
 export async function signOut() {
   try {
     await account.deleteSession('current');

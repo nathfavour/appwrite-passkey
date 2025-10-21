@@ -16,7 +16,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
-import { deletePasskey, disablePasskey } from '@/lib/passkey-client-utils';
+import { deletePasskey, disablePasskey, enablePasskey } from '@/lib/passkey-client-utils';
 
 interface Passkey {
   id: string;
@@ -41,6 +41,7 @@ export default function PasskeyList({
 }: PasskeyListProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [disabling, setDisabling] = useState<string | null>(null);
+  const [enabling, setEnabling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleDelete = async (credentialId: string) => {
