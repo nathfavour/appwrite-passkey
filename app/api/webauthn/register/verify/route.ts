@@ -135,6 +135,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, token: result.token });
   } catch (err) {
     const debug = process.env.WEBAUTHN_DEBUG === '1';
-    return NextResponse.json({ error: (err as Error).message || String(err), ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });
+    const errorMsg = (err as Error).message || String(err);
+    // Return 403 for "Account already exists" error
+    if (errorMsg === 'Account already exists') {
+      return NextResponse.json({ error: errorMsg }, { status: 403 });
+    }
+    return NextResponse.json({ error: errorMsg, ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });
   }
 }

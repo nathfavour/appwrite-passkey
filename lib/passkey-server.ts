@@ -34,10 +34,11 @@ export class PasskeyServer {
   async shouldBlockPasskeyForEmail(email: string): Promise<boolean> {
     const user = await this.getUserIfExists(email);
     if (!user) return false;
-    const hasWallet = !!(user.prefs?.walletEth);
     const credsObj = this.parseCredsMap(user.prefs?.passkey_credentials as string | undefined);
     const hasPasskeys = Object.keys(credsObj).length > 0;
-    return hasWallet && !hasPasskeys;
+    // Block passkey registration/operations if account exists but has NO passkeys
+    // (whether it has wallet or any other auth method)
+    return !hasPasskeys;
   }
   async prepareUser(email: string) {
     // Find existing by email
@@ -55,7 +56,11 @@ export class PasskeyServer {
     challenge: string,
     opts?: { rpID?: string; origin?: string }
   ) {
-    // Prepare user
+    // Block if account exists without passkeys
+    if (await this.shouldBlockPasskeyForEmail(email)) {
+      throw new Error('Account already exists');
+    }
+    // Prepare user (create new or retrieve if it has passkeys)
     const user = await this.prepareUser(email);
 
     // Verify the WebAuthn registration
