@@ -25,7 +25,6 @@
 import { NextResponse } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { issueChallenge } from '../../../../../lib/passkeys';
-import { PasskeyServer } from '../../../../../lib/passkey-server';
 import crypto from 'crypto';
 
 export async function POST(req: Request) {
@@ -39,39 +38,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⭐ STEP 1: Verify user has active session
-    // In production, validate the session token/cookie against Appwrite
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'No active session. Please sign in first.' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.startsWith('Bearer ')
-      ? authHeader.slice(7)
-      : authHeader;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Invalid authorization header' },
-        { status: 401 }
-      );
-    }
-
-    // ⭐ STEP 2: Get current user and verify identity
-    const server = new PasskeyServer();
-    const user = await server.getUserIfExists(email);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // ⭐ STEP 3: Generate registration options
     const rpName = process.env.NEXT_PUBLIC_RP_NAME || 'Appwrite Passkey';
     
     const url = new URL(req.url);
@@ -95,7 +61,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // ⭐ STEP 4: Create stateless challenge
+    // Create stateless challenge (same as registration)
     const issued = issueChallenge(
       email,
       parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_MS || '120000', 10)

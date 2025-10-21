@@ -11,7 +11,7 @@ export async function addPasskeyToAccount(email: string) {
   const res = await fetch('/api/webauthn/connect/options', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: email }),
+    body: JSON.stringify({ email: email }),
   });
 
   if (!res.ok) {

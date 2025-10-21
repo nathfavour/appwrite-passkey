@@ -25,75 +25,37 @@
 
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { verifyAuthenticationResponse } from '@simplewebauthn/server';
+import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { verifyChallengeToken } from '../../../../../lib/passkeys';
 import { PasskeyServer } from '../../../../../lib/passkey-server';
 import { rateLimit, buildRateKey } from '../../../../../lib/rateLimit';
 
 export async function POST(req: Request) {
-  let email = '';
-  const server = new PasskeyServer();
-
   try {
-    const { email: rawEmail, assertion, challengeToken, challenge } = await req.json();
-    email = String(rawEmail).trim().toLowerCase();
-
-    if (!email || !assertion || !challengeToken || !challenge) {
-      return NextResponse.json(
-        { error: 'email, assertion, challenge and challengeToken required' },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const { email: rawEmail, attestation, challengeToken, challenge } = body || {};
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (!email || !attestation || !challengeToken || !challenge) {
+      return NextResponse.json({ error: 'email, attestation, challenge and challengeToken required' }, { status: 400 });
     }
 
-    // ⭐ STEP 1: Verify user has an Appwrite account
-    // The user must exist in the system - they're identified by email
-    // Session validation happens implicitly: client can only call this from authenticated context
-    const user = await server.getUserIfExists(email);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User account not found' },
-        { status: 404 }
-      );
-    }
-
-    // ⭐ STEP 2: Check rate limiting (same as auth flow)
-    const rateLimitCheck = await server.checkAuthRateLimit(email);
-    if (!rateLimitCheck.allowed) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        {
-          error: rateLimitCheck.message || 'Rate limited',
-          status: rateLimitCheck.status,
-        },
-        { status: 429, headers: { 'Retry-After': '60' } }
-      );
-    }
-
-    // Also keep old IP-based rate limit for defense-in-depth
+    // Rate limit verification attempts (per IP + email)
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const windowMs = parseInt(process.env.WEBAUTHN_RATE_LIMIT_WINDOW_MS || '60000', 10);
-    const max = parseInt(process.env.WEBAUTHN_RATE_LIMIT_MAX || '30', 10);
-    const rl = rateLimit(buildRateKey(['webauthn', 'connect', 'verify', ip, email]), max, windowMs);
+    const max = parseInt(process.env.WEBAUTHN_RATE_LIMIT_MAX || '20', 10);
+    const rl = rateLimit(buildRateKey(['webauthn','connect','verify', ip, email]), max, windowMs);
     if (!rl.allowed) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Too many verification attempts. Please wait.' },
-        { status: 429, headers: { 'Retry-After': Math.ceil((rl.reset - Date.now()) / 1000).toString() } }
-      );
+      return NextResponse.json({ error: 'Too many verification attempts. Wait and retry.' }, { status: 429, headers: { 'Retry-After': Math.ceil((rl.reset - Date.now())/1000).toString() } });
     }
 
-    // ⭐ STEP 3: Verify challenge token
+    // Stateless challenge validation
     try {
       verifyChallengeToken(email, challenge, challengeToken);
     } catch (e) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: (e as Error).message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
 
-    // ⭐ STEP 4: Derive expected RP ID and Origin
+    // Derive expected RP ID and Origin dynamically from request headers, with env overrides
     const url = new URL(req.url);
     const forwardedProto = req.headers.get('x-forwarded-proto');
     const forwardedHost = req.headers.get('x-forwarded-host');
@@ -103,8 +65,8 @@ export async function POST(req: Request) {
     const rpID = process.env.NEXT_PUBLIC_RP_ID || hostNoPort || 'localhost';
     const origin = process.env.NEXT_PUBLIC_ORIGIN || `${protocol}://${hostHeader}`;
 
-    // ⭐ STEP 5: Validate attestation shape
-    const att: any = assertion;
+    // Shape & type validation + reconstruction to avoid prototype issues
+    const att: any = attestation;
     const shapeErrors: string[] = [];
     if (typeof att !== 'object' || !att) shapeErrors.push('attestation not object');
     if (!att.id) shapeErrors.push('missing id');
@@ -113,16 +75,11 @@ export async function POST(req: Request) {
     if (!att.response) shapeErrors.push('missing response');
     if (att.response && !att.response.clientDataJSON) shapeErrors.push('missing response.clientDataJSON');
     if (att.response && !att.response.attestationObject) shapeErrors.push('missing response.attestationObject');
-
     if (shapeErrors.length) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Malformed attestation', detail: shapeErrors },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Malformed attestation', detail: shapeErrors }, { status: 400 });
     }
 
-    // ⭐ STEP 7: Verify registration response
+    // Reconstruct minimal credential object expected by simplewebauthn
     const credential = {
       id: att.id,
       rawId: att.rawId,
@@ -135,49 +92,35 @@ export async function POST(req: Request) {
     };
 
     const debug = process.env.WEBAUTHN_DEBUG === '1';
-    let verification: any;
 
+    let verification: any;
     try {
-      verification = await verifyAuthenticationResponse({
-        response: assertion,
+      verification = await verifyRegistrationResponse({
+        response: attestation,
         expectedChallenge: challenge,
         expectedOrigin: origin,
         expectedRPID: rpID,
       });
     } catch (libErr) {
-      await server.recordAuthAttempt(email, false);
       const msg = (libErr as Error).message || String(libErr);
-      return NextResponse.json(
-        {
-          error: 'WebAuthn library verification threw',
-          detail: msg,
-          ...(debug ? { expectedOrigin: origin, expectedRPID: rpID } : {}),
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'WebAuthn library verification threw', detail: msg, ...(debug ? { attestationShape: Object.keys(attestation || {}), responseKeys: attestation?.response ? Object.keys(attestation.response) : [], idLength: attestation?.id?.length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: String(challenge).slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
     if (!verification?.verified) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Registration verification failed' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Registration verification failed', detail: verification, ...(debug ? { idLen: (credential.id||'').length, rawIdType: typeof credential.rawId, rawIdLen: (credential.rawId||'').length, expectedOrigin: origin, expectedRPID: rpID, expectedChallenge: challenge.slice(0,8)+'...' } : {}) }, { status: 400 });
     }
 
-    // ⭐ STEP 8: Extract credential data
     const registrationInfo: any = (verification as any).registrationInfo;
     if (!registrationInfo) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Missing registrationInfo in verification result' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Missing registrationInfo in verification result' }, { status: 500 });
     }
 
+    // Normalize binary fields to base64url strings
     const toBase64Url = (val: unknown): string | null => {
       if (!val) return null;
-      if (typeof val === 'string') return val;
+      if (typeof val === 'string') {
+        return val;
+      }
       const anyVal: any = val;
       if (typeof Buffer !== 'undefined' && (Buffer.isBuffer?.(anyVal) || anyVal instanceof Uint8Array)) {
         return Buffer.from(anyVal).toString('base64url');
@@ -188,37 +131,25 @@ export async function POST(req: Request) {
       return null;
     };
 
+    // Support both v7 and v8 shapes from simplewebauthn
     const credObj = registrationInfo.credential || {};
     const credId = toBase64Url(credObj.id) || toBase64Url((registrationInfo as any).credentialID);
     const pubKey = toBase64Url(credObj.publicKey) || toBase64Url((registrationInfo as any).credentialPublicKey);
     const counter = credObj.counter ?? registrationInfo.counter ?? 0;
+    const transports = credObj.transports ?? [];
 
     if (!credId || !pubKey) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Registration returned incomplete credential' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Registration returned incomplete credential', ...(debug ? { registrationInfoKeys: Object.keys(registrationInfo || {}), credentialKeys: Object.keys(credObj || {}) } : {}) }, { status: 500 });
     }
 
-    // ⭐ STEP 9: Store passkey (using standard registerPasskey logic)
-    // This reuses all the same storage logic as the registration flow
-    const result = await server.registerPasskey(email, assertion, challenge, { rpID, origin });
-
+    // Persist passkey in user prefs - reuse same logic as registration
+    const server = new PasskeyServer();
+    const result = await server.registerPasskey(email, attestation, challenge, { rpID, origin });
     if (!result?.token?.secret) {
-      await server.recordAuthAttempt(email, false);
-      return NextResponse.json(
-        { error: 'Failed to register passkey' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to register passkey' }, { status: 500 });
     }
 
-    // ⭐ STEP 10: Record successful attempt
-    await server.recordAuthAttempt(email, true);
-
-    // ⭐ IMPORTANT: NO session created
-    // User is already authenticated, just linking the passkey
-    // Return success without creating new session
+    // Success - no session created (user already authenticated)
     return NextResponse.json({
       success: true,
       message: 'Passkey connected successfully. You can now sign in with it.',
@@ -226,18 +157,6 @@ export async function POST(req: Request) {
   } catch (err) {
     const debug = process.env.WEBAUTHN_DEBUG === '1';
     const errorMsg = (err as Error).message || String(err);
-
-    // Record failed attempt
-    if (email) {
-      await server.recordAuthAttempt(email, false);
-    }
-
-    return NextResponse.json(
-      {
-        error: errorMsg,
-        ...(debug ? { stack: (err as Error).stack } : {}),
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMsg, ...(debug ? { stack: (err as Error).stack } : {}) }, { status: 500 });
   }
 }
