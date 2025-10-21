@@ -32,7 +32,7 @@ export class PasskeyServer {
     return (usersList as any).users?.[0] ?? null;
   }
 
-  private parseCredsMap(str: string | undefined): Record<string, string> {
+  parseCredsMap(str: string | undefined): Record<string, string> {
     if (!str) return {};
     try { return JSON.parse(str) as Record<string, string>; } catch { return {}; }
   }
@@ -289,3 +289,4 @@ export class PasskeyServer {
       await this.rateLimit.resetRateLimit(user);
     }
   }
+}
