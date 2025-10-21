@@ -122,11 +122,11 @@ export async function POST(req: Request) {
     const transports = credObj.transports ?? [];
 
     if (!credId || !pubKey) {
-      const debug = process.env.WEBAUTHN_DEBUG === '1';
       return NextResponse.json({ error: 'Registration returned incomplete credential', ...(debug ? { registrationInfoKeys: Object.keys(registrationInfo || {}), credentialKeys: Object.keys(credObj || {}) } : {}) }, { status: 500 });
     }
 
     // Persist passkey in user prefs and create a custom token (server-side API key)
+    // Initialize server BEFORE try block so catch block can access it
     const server = new PasskeyServer();
     const result = await server.registerPasskey(userId, attestation, challenge, { rpID, origin });
     if (!result?.token?.secret) {
