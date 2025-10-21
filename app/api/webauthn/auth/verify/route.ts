@@ -77,7 +77,6 @@ export async function POST(req: Request) {
     }
     const debug = process.env.WEBAUTHN_DEBUG === '1';
 
-    const server = new PasskeyServer();
     // server.authenticatePasskey will update counter and mint custom token
     const result = await server.authenticatePasskey(userId, assertion, challenge, { rpID, origin });
     if (!result?.token?.secret) {
