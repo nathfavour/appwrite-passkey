@@ -107,11 +107,22 @@ export class PasskeyServer {
     credObj[passkeyData.id] = passkeyData.publicKey;
     counterObj[passkeyData.id] = passkeyData.counter;
     
+    // Initialize metadata for new passkey
+    const metadataStr = (existingPrefs.passkey_metadata || '') as string;
+    let metadataObj: Record<string, any> = metadataStr ? JSON.parse(metadataStr) : {};
+    metadataObj[passkeyData.id] = {
+      name: `Passkey ${new Date().toLocaleDateString()}`,
+      createdAt: Date.now(),
+      lastUsedAt: null,
+      status: 'active'
+    };
+    
     // Serialize back to strings
     // Merge existing prefs to avoid overwriting unrelated keys (e.g., walletEth)
     const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
     mergedPrefs.passkey_credentials = JSON.stringify(credObj);
     mergedPrefs.passkey_counter = JSON.stringify(counterObj);
+    mergedPrefs.passkey_metadata = JSON.stringify(metadataObj);
     await users.updatePrefs(user.$id, mergedPrefs);
 
     // Create custom token
@@ -156,6 +167,13 @@ export class PasskeyServer {
       throw new Error('Unknown credential');
     }
 
+    // Check if passkey is disabled or compromised
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    const isAvailable = await this.isPasskeyAvailable(credentialId, metadataStr);
+    if (!isAvailable) {
+      throw new Error('This passkey is disabled or has been marked as compromised.');
+    }
+
     // Verify the WebAuthn authentication
     const verification = await (SimpleWebAuthnServer.verifyAuthenticationResponse as any)({
       response: assertion,
@@ -182,6 +200,7 @@ export class PasskeyServer {
     if (newCounter < counter) {
       // Counter went backwards = passkey was cloned and used elsewhere!
       // This is a strong indicator of compromise
+      await this.markPasskeyCompromised(email, credentialId);
       throw new Error('Potential passkey compromise detected. Counter regression. This credential has been used elsewhere. Please reset your account.');
     }
     
@@ -216,6 +235,22 @@ export class PasskeyServer {
     }
     
     mergedPrefs.passkey_counter_history = JSON.stringify(counterHistory);
+    
+    // Update lastUsedAt in metadata
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    let metadata: Record<string, any> = metadataStr ? JSON.parse(metadataStr) : {};
+    if (!metadata[credentialId]) {
+      metadata[credentialId] = {
+        name: `Passkey ${new Date().toLocaleDateString()}`,
+        createdAt: Date.now(),
+        lastUsedAt: Date.now(),
+        status: 'active'
+      };
+    } else {
+      metadata[credentialId].lastUsedAt = Date.now();
+    }
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    
     await users.updatePrefs(user.$id, mergedPrefs);
 
     // Create custom token
@@ -236,6 +271,214 @@ export class PasskeyServer {
     if (!credentialsStr) return [];
     const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
     return Object.entries(credObj).map(([id, pk]) => ({ id, publicKey: pk, counter: 0 }));
+  }
+
+  /**
+   * Parse passkey metadata (with fallback for old passkeys)
+   */
+  private parseMetadata(str: string | undefined): Record<string, any> {
+    if (!str) return {};
+    try { return JSON.parse(str) as Record<string, any>; } catch { return {}; }
+  }
+
+  /**
+   * Initialize metadata for a new passkey if not exists
+   */
+  private initializeMetadata(credentialId: string, metadata: Record<string, any> = {}): any {
+    if (metadata[credentialId]) return metadata;
+    metadata[credentialId] = {
+      name: `Passkey ${new Date().toLocaleDateString()}`,
+      createdAt: Date.now(),
+      lastUsedAt: null,
+      status: 'active'
+    };
+    return metadata;
+  }
+
+  /**
+   * Get all passkeys with metadata for user
+   */
+  async listPasskeysWithMetadata(email: string): Promise<Array<{
+    id: string;
+    name: string;
+    createdAt: number;
+    lastUsedAt: number | null;
+    status: 'active' | 'disabled' | 'compromised';
+  }>> {
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+
+    if (!credentialsStr) return [];
+
+    const metadata = this.parseMetadata(metadataStr);
+    const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
+
+    return Object.keys(credObj).map(id => {
+      const meta = metadata[id] || this.initializeMetadata(id, {})[id];
+      return {
+        id,
+        name: meta.name || `Passkey ${new Date(meta.createdAt || 0).toLocaleDateString()}`,
+        createdAt: meta.createdAt || Date.now(),
+        lastUsedAt: meta.lastUsedAt || null,
+        status: meta.status || 'active'
+      };
+    });
+  }
+
+  /**
+   * Get single passkey info with metadata
+   */
+  async getPasskeyInfo(email: string, credentialId: string): Promise<{
+    id: string;
+    name: string;
+    createdAt: number;
+    lastUsedAt: number | null;
+    status: 'active' | 'disabled' | 'compromised';
+  } | null> {
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+
+    const credObj: Record<string, string> = JSON.parse(credentialsStr || '{}') as Record<string, string>;
+    if (!credObj[credentialId]) return null;
+
+    const metadata = this.parseMetadata(metadataStr);
+    const meta = metadata[credentialId] || this.initializeMetadata(credentialId, {})[credentialId];
+
+    return {
+      id: credentialId,
+      name: meta.name || `Passkey ${new Date(meta.createdAt || 0).toLocaleDateString()}`,
+      createdAt: meta.createdAt || Date.now(),
+      lastUsedAt: meta.lastUsedAt || null,
+      status: meta.status || 'active'
+    };
+  }
+
+  /**
+   * Rename passkey
+   */
+  async renamePasskey(email: string, credentialId: string, newName: string): Promise<void> {
+    if (!newName || newName.trim().length === 0) {
+      throw new Error('Passkey name cannot be empty');
+    }
+    if (newName.length > 50) {
+      throw new Error('Passkey name must be 50 characters or less');
+    }
+
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const credObj: Record<string, string> = JSON.parse(credentialsStr || '{}') as Record<string, string>;
+
+    if (!credObj[credentialId]) {
+      throw new Error('Passkey not found');
+    }
+
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    let metadata = this.parseMetadata(metadataStr);
+    metadata = this.initializeMetadata(credentialId, metadata);
+    metadata[credentialId].name = newName.trim();
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
+  }
+
+  /**
+   * Disable passkey (soft delete)
+   */
+  async disablePasskey(email: string, credentialId: string): Promise<void> {
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const credObj: Record<string, string> = JSON.parse(credentialsStr || '{}') as Record<string, string>;
+
+    if (!credObj[credentialId]) {
+      throw new Error('Passkey not found');
+    }
+
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    let metadata = this.parseMetadata(metadataStr);
+    metadata = this.initializeMetadata(credentialId, metadata);
+    metadata[credentialId].status = 'disabled';
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
+  }
+
+  /**
+   * Delete passkey permanently
+   */
+  async deletePasskey(email: string, credentialId: string): Promise<void> {
+    const user = await this.prepareUser(email);
+    const credentialsStr = (user.prefs?.passkey_credentials || '') as string;
+    const credObj: Record<string, string> = JSON.parse(credentialsStr || '{}') as Record<string, string>;
+
+    if (!credObj[credentialId]) {
+      throw new Error('Passkey not found');
+    }
+
+    const remainingKeys = Object.keys(credObj).filter(id => id !== credentialId);
+    if (remainingKeys.length === 0) {
+      throw new Error('Cannot delete the last passkey. Add another auth method first.');
+    }
+
+    delete credObj[credentialId];
+
+    const counterStr = (user.prefs?.passkey_counter || '') as string;
+    const counterObj: Record<string, number> = counterStr ? JSON.parse(counterStr) : {};
+    delete counterObj[credentialId];
+
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+    const metadata = this.parseMetadata(metadataStr);
+    delete metadata[credentialId];
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_credentials = JSON.stringify(credObj);
+    mergedPrefs.passkey_counter = JSON.stringify(counterObj);
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
+  }
+
+  /**
+   * Check if passkey is available (not disabled/compromised)
+   */
+  async isPasskeyAvailable(credentialId: string, metadataStr: string): Promise<boolean> {
+    const metadata = this.parseMetadata(metadataStr);
+    const status = metadata[credentialId]?.status || 'active';
+    return status === 'active';
+  }
+
+  /**
+   * Update passkey last used timestamp
+   */
+  async updatePasskeyLastUsed(email: string, credentialId: string): Promise<void> {
+    const user = await this.prepareUser(email);
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+
+    let metadata = this.parseMetadata(metadataStr);
+    metadata = this.initializeMetadata(credentialId, metadata);
+    metadata[credentialId].lastUsedAt = Date.now();
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
+  }
+
+  /**
+   * Mark passkey as compromised
+   */
+  async markPasskeyCompromised(email: string, credentialId: string): Promise<void> {
+    const user = await this.prepareUser(email);
+    const metadataStr = (user.prefs?.passkey_metadata || '') as string;
+
+    let metadata = this.parseMetadata(metadataStr);
+    metadata = this.initializeMetadata(credentialId, metadata);
+    metadata[credentialId].status = 'compromised';
+
+    const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
+    mergedPrefs.passkey_metadata = JSON.stringify(metadata);
+    await users.updatePrefs(user.$id, mergedPrefs);
   }
 
   /**
