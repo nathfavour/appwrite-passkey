@@ -15,7 +15,42 @@ import crypto from 'crypto';
 const endpoint = (process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || '').replace(/\/$/, '');
 const project = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 const apiKey = process.env.APPWRITE_API;
-const secret = process.env.PASSKEY_CHALLENGE_SECRET || 'dev-insecure-secret';
+
+/**
+ * Get HMAC secrets for challenge signing.
+ * Supports rotating secrets for zero-downtime rotation.
+ * 
+ * Environment variable format:
+ * PASSKEY_CHALLENGE_SECRETS='[{"secret":"current-secret","rotatedAt":1702977904},{"secret":"previous-secret","rotatedAt":1702890000}]'
+ * 
+ * If not set, falls back to PASSKEY_CHALLENGE_SECRET (single secret, non-rotating)
+ */
+function getSecrets(): Array<{ secret: string; rotatedAt: number }> {
+  // Try rotating secrets first
+  const rotatingSecretsJson = process.env.PASSKEY_CHALLENGE_SECRETS;
+  if (rotatingSecretsJson) {
+    try {
+      const secrets = JSON.parse(rotatingSecretsJson);
+      if (Array.isArray(secrets) && secrets.length > 0 && secrets[0]?.secret) {
+        return secrets;
+      }
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fall back to single secret (backwards compatible)
+  const singleSecret = process.env.PASSKEY_CHALLENGE_SECRET || 'dev-insecure-secret';
+  return [{ secret: singleSecret, rotatedAt: Date.now() }];
+}
+
+/**
+ * Get the current (first) secret for signing new challenges
+ */
+function getCurrentSecret(): string {
+  const secrets = getSecrets();
+  return secrets[0]?.secret || 'dev-insecure-secret';
+}
 
 function baseHeaders() {
   return {
@@ -25,32 +60,70 @@ function baseHeaders() {
   };
 }
 
+/**
+ * Create a random challenge for WebAuthn
+ */
 function randomChallenge(bytes = 32) {
   return crypto.randomBytes(bytes).toString('base64url');
 }
 
-// Payload we sign: { userId, challenge, exp }
+/**
+ * Issue a new challenge with HMAC-signed token.
+ * Signs with the current secret; verification accepts current + previous secrets (grace period).
+ */
 export function issueChallenge(userId: string, ttlMs: number) {
   const challenge = randomChallenge();
   const exp = Date.now() + ttlMs;
   const payload = JSON.stringify({ u: userId, c: challenge, e: exp });
-  const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  
+  const currentSecret = getCurrentSecret();
+  const sig = crypto.createHmac('sha256', currentSecret).update(payload).digest('base64url');
   const token = Buffer.from(payload).toString('base64url') + '.' + sig;
+  
   return { challenge, challengeToken: token };
 }
 
+/**
+ * Verify a challenge token (HMAC signature + user binding + expiry).
+ * Accepts signatures from current secret and previous secrets (grace period).
+ */
 export function verifyChallengeToken(userId: string, challenge: string, token: string) {
   const parts = token.split('.');
   if (parts.length !== 2) throw new Error('Malformed challenge token');
+
   const payloadJson = Buffer.from(parts[0], 'base64url').toString();
   const sig = parts[1];
-  const expectedSig = crypto.createHmac('sha256', secret).update(payloadJson).digest('base64url');
-  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) throw new Error('Invalid challenge signature');
+
+  // Try verification with all available secrets (current + previous)
+  const secrets = getSecrets();
+  let validSig = false;
+
+  for (const secretObj of secrets) {
+    const expectedSig = crypto.createHmac('sha256', secretObj.secret).update(payloadJson).digest('base64url');
+    try {
+      if (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+        validSig = true;
+        break;
+      }
+    } catch {
+      // timingSafeEqual throws if buffers are different length; continue trying
+      continue;
+    }
+  }
+
+  if (!validSig) throw new Error('Invalid challenge signature');
+
   let parsed: { u: string; c: string; e: number };
-  try { parsed = JSON.parse(payloadJson); } catch { throw new Error('Bad challenge payload'); }
+  try {
+    parsed = JSON.parse(payloadJson);
+  } catch {
+    throw new Error('Bad challenge payload');
+  }
+
   if (parsed.u !== userId) throw new Error('User mismatch');
   if (parsed.c !== challenge) throw new Error('Challenge mismatch');
   if (Date.now() > parsed.e) throw new Error('Challenge expired');
+
   return true;
 }
 

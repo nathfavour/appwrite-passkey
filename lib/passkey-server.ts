@@ -2,6 +2,7 @@ import { Client, Users, ID, Query } from 'node-appwrite';
 import crypto from 'crypto';
 import * as SimpleWebAuthnServer from '@simplewebauthn/server';
 import * as SimpleWebAuthnServerHelpers from '@simplewebauthn/server/helpers';
+import { AuthRateLimit } from './auth-rate-limit';
 
 const client = new Client();
 const serverEndpoint = process.env.APPWRITE_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
@@ -21,6 +22,11 @@ client.setKey(serverApiKey);
 const users = new Users(client);
 
 export class PasskeyServer {
+  private rateLimit: AuthRateLimit;
+
+  constructor() {
+    this.rateLimit = new AuthRateLimit(users);
+  }
   async getUserIfExists(email: string): Promise<any | null> {
     const usersList = await users.list([Query.equal('email', email), Query.limit(1)]);
     return (usersList as any).users?.[0] ?? null;
@@ -171,10 +177,45 @@ export class PasskeyServer {
     // Update counter in auth helper (guard if missing)
     const authInfo: any = (verification as any).authenticationInfo;
     const newCounter = (authInfo && typeof authInfo.newCounter === 'number') ? authInfo.newCounter : counter;
+    
+    // ⭐ CRITICAL: Detect cloned passkey (counter regression)
+    if (newCounter < counter) {
+      // Counter went backwards = passkey was cloned and used elsewhere!
+      // This is a strong indicator of compromise
+      throw new Error('Potential passkey compromise detected. Counter regression. This credential has been used elsewhere. Please reset your account.');
+    }
+    
     counterObj[credentialId] = newCounter;
     // Merge existing prefs to avoid dropping other keys (e.g., passkey_credentials)
     const mergedPrefs = { ...(user.prefs || {}) } as Record<string, unknown>;
     mergedPrefs.passkey_counter = JSON.stringify(counterObj);
+    
+    // ⭐ NEW: Store counter history for forensics (doesn't affect backwards compatibility)
+    const counterHistoryStr = (user.prefs?.passkey_counter_history || '') as string;
+    let counterHistory: Record<string, Array<{ timestamp: number; counter: number }>> = {};
+    if (counterHistoryStr) {
+      try {
+        counterHistory = JSON.parse(counterHistoryStr);
+      } catch {
+        counterHistory = {};
+      }
+    }
+    
+    if (!counterHistory[credentialId]) {
+      counterHistory[credentialId] = [];
+    }
+    
+    counterHistory[credentialId].push({
+      timestamp: Date.now(),
+      counter: newCounter,
+    });
+    
+    // Keep only last 50 counter entries per credential (prevent unbounded growth)
+    if (counterHistory[credentialId].length > 50) {
+      counterHistory[credentialId] = counterHistory[credentialId].slice(-50);
+    }
+    
+    mergedPrefs.passkey_counter_history = JSON.stringify(counterHistory);
     await users.updatePrefs(user.$id, mergedPrefs);
 
     // Create custom token
@@ -196,4 +237,55 @@ export class PasskeyServer {
     const credObj: Record<string, string> = JSON.parse(credentialsStr) as Record<string, string>;
     return Object.entries(credObj).map(([id, pk]) => ({ id, publicKey: pk, counter: 0 }));
   }
-}
+
+  /**
+   * Check rate limit for auth attempt (call before attempting auth)
+   */
+  async checkAuthRateLimit(email: string): Promise<{
+    allowed: boolean;
+    status: string;
+    attemptsRemaining: number;
+    attemptsTotal: number;
+    message: string | null;
+  }> {
+    const user = await this.getUserIfExists(email);
+    if (!user) {
+      // New user, no rate limit
+      return {
+        allowed: true,
+        status: 'normal',
+        attemptsRemaining: 10,
+        attemptsTotal: 10,
+        message: null,
+      };
+    }
+
+    const result = await this.rateLimit.checkRateLimit(user, 'passkey');
+    return {
+      allowed: result.allowed,
+      status: result.status,
+      attemptsRemaining: result.attemptsRemaining,
+      attemptsTotal: result.attemptsTotal,
+      message: result.message,
+    };
+  }
+
+  /**
+   * Record an auth attempt (call after auth attempt, regardless of success)
+   */
+  async recordAuthAttempt(email: string, success: boolean): Promise<void> {
+    const user = await this.getUserIfExists(email);
+    if (user) {
+      await this.rateLimit.recordAuthAttempt(user, 'passkey', success);
+    }
+  }
+
+  /**
+   * Reset rate limit (admin action, e.g., after email verification)
+   */
+  async resetAuthRateLimit(email: string): Promise<void> {
+    const user = await this.getUserIfExists(email);
+    if (user) {
+      await this.rateLimit.resetRateLimit(user);
+    }
+  }
