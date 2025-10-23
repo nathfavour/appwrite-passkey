@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Account Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f9c806",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#181711",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col w-full max-w-6xl">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-4">
+<aside class="md:col-span-1">
+<div class="flex flex-col gap-4 p-4 rounded-xl bg-background-light dark:bg-background-dark border border-white/10">
+<div class="flex gap-3 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="John Doe's profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCAAiWx9EgN954m-QbPFwxlrOW6PTwDduYxnZMBcSPj9iJhIfnMLkTJUVIoL1tPU1Oq290kC460cd-AQ0gMs-_0b6NTX4UMQTkaHZoZgjadWBQ8xmqpnvnXgqJfTiUyBAIg8BNxFgtBkgd7L-zSAd_gdLN1UwCwrYPYq2Gz2AhUtM2Q5bjdw0FZCx9jQCxg6DaocEL2e-IrbfRVndzOM4_VK0Hv30OXbXrzjJmtYjJqnWbpqYUR9zMHCPkJfsHCbUz5gyzanCrnaZAf");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-medium leading-normal">John Doe</h1>
+<p class="text-gray-400 dark:text-[#bbb49b] text-sm font-normal leading-normal">john.doe@example.com</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 mt-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20">
+<span class="material-symbols-outlined text-primary text-2xl">person</span>
+<p class="text-primary text-sm font-medium leading-normal">Profile</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-white text-2xl">lock</span>
+<p class="text-white text-sm font-medium leading-normal">Security</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-white text-2xl">settings</span>
+<p class="text-white text-sm font-medium leading-normal">Account</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="md:col-span-3">
+<div class="flex flex-wrap justify-between gap-3 p-4">
+<p class="text-white text-4xl font-black leading-tight tracking-[-0.033em] min-w-72 font-display">Account Settings</p>
+</div>
+<div class="space-y-8">
+<section id="profile">
+<h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5 font-display">Profile</h2>
+<div class="bg-[#231f0f] dark:bg-[#1f1e18] border border-white/10 rounded-xl">
+<div class="flex items-center gap-4 px-4 py-3 min-h-14 justify-between border-b border-white/10">
+<div class="flex items-center gap-4">
+<p class="text-white text-base font-normal leading-normal flex-1 truncate">Username</p>
+<p class="text-gray-400 dark:text-gray-400">@johndoe</p>
+</div>
+<div class="shrink-0"><button class="text-primary text-base font-medium leading-normal">Edit</button></div>
+</div>
+</div>
+</section>
+<section id="wallets">
+<div class="flex justify-between items-center px-4 pb-3 pt-5">
+<h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] font-display">Connected Wallets</h2>
+<button class="bg-primary text-background-dark px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                                            Connect New Wallet
+                                        </button>
+</div>
+<div class="bg-[#231f0f] dark:bg-[#1f1e18] border border-white/10 rounded-xl">
+<div class="flex items-center gap-4 px-4 py-3 min-h-14 justify-between border-b border-white/10">
+<div class="flex items-center gap-4">
+<div class="text-white flex items-center justify-center rounded-lg bg-[#3a3627] shrink-0 size-10">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<p class="text-white text-base font-normal leading-normal flex-1 truncate">0x1234...abcd</p>
+</div>
+<div class="shrink-0"><button class="text-red-500 text-base font-medium leading-normal">Disconnect</button></div>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 min-h-14 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-white flex items-center justify-center rounded-lg bg-[#3a3627] shrink-0 size-10">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<p class="text-white text-base font-normal leading-normal flex-1 truncate">0x5678...efgh</p>
+</div>
+<div class="shrink-0"><button class="text-red-500 text-base font-medium leading-normal">Disconnect</button></div>
+</div>
+</div>
+</section>
+<section id="security">
+<h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5 font-display">Security</h2>
+<div class="bg-[#231f0f] dark:bg-[#1f1e18] border border-white/10 rounded-xl divide-y divide-white/10">
+<div class="p-4">
+<div class="flex justify-between items-center">
+<h3 class="text-white text-base font-medium">Passkeys</h3>
+<button class="bg-primary text-background-dark px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                                                    Add Passkey
+                                                </button>
+</div>
+<div class="mt-4 space-y-3">
+<div class="flex items-center gap-4 min-h-14 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-white flex items-center justify-center rounded-lg bg-[#3a3627] shrink-0 size-10">
+<span class="material-symbols-outlined">fingerprint</span>
+</div>
+<p class="text-white text-base font-normal leading-normal flex-1 truncate">My Desktop Key</p>
+</div>
+<div class="shrink-0"><button class="text-red-500 text-base font-medium leading-normal">Remove</button></div>
+</div>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-center">
+<div>
+<h3 class="text-white text-base font-medium">Multi-Factor Authentication (MFA)</h3>
+<p class="text-gray-400 text-sm">Add an extra layer of security to your account.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<section id="account">
+<h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5 font-display">Account</h2>
+<div class="bg-[#231f0f] dark:bg-[#1f1e18] border border-white/10 rounded-xl divide-y divide-white/10">
+<div class="flex items-center gap-4 p-4 justify-between">
+<div>
+<h3 class="text-white text-base font-medium">Export Data</h3>
+<p class="text-gray-400 text-sm">Download a copy of your account data.</p>
+</div>
+<div class="shrink-0"><button class="border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium">Export</button></div>
+</div>
+<div class="flex items-center gap-4 p-4 justify-between">
+<div>
+<h3 class="text-white text-base font-medium">Delete Account</h3>
+<p class="text-gray-400 text-sm">Permanently delete your account and all associated data.</p>
+</div>
+<div class="shrink-0"><button class="bg-red-600/20 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg text-sm font-medium">Delete Account</button></div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

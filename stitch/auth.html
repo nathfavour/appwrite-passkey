@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f9c806",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#231f0f",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen items-center justify-center bg-black/50">
+<div class="w-full max-w-md rounded-xl bg-background-dark p-8 shadow-2xl">
+<div class="flex justify-end">
+<button class="text-[#bbb49b] hover:text-white">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="mb-6 text-center">
+<p class="text-white text-4xl font-black leading-tight tracking-[-0.033em]">Log in to Acme Corp</p>
+</div>
+<div class="flex flex-col gap-3">
+<button class="flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-[#3a3627] h-12 px-5 text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4637]">
+<svg class="h-6 w-6" fill="none" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_302_3)"><path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12.24V14.16H18.15C17.92 15.65 17.15 16.92 15.93 17.75V20.44H19.62C21.58 18.66 22.56 15.74 22.56 12.25Z" fill="#4285F4"></path><path d="M12.24 23C15.11 23 17.55 22.05 19.62 20.44L15.93 17.75C15.02 18.39 13.77 18.79 12.24 18.79C9.31 18.79 6.81 16.94 5.92 14.28H2.13V17.07C3.99 20.73 7.8 23 12.24 23Z" fill="#34A853"></path><path d="M5.92 14.28C5.69 13.58 5.56 12.82 5.56 12C5.56 11.18 5.69 10.42 5.92 9.72V6.93H2.13C1.43 8.35 1 10.12 1 12C1 13.88 1.43 15.65 2.13 17.07L5.92 14.28Z" fill="#FBBC05"></path><path d="M12.24 5.21C13.87 5.21 15.22 5.76 16.27 6.75L19.7 3.32C17.55 1.26 15.11 0 12.24 0C7.8 0 3.99 2.27 2.13 5.93L5.92 8.72C6.81 6.06 9.31 4.21 12.24 4.21V5.21Z" fill="#EA4335"></path></g><defs><clippath id="clip0_302_3"><rect fill="white" height="24" width="24"></rect></clippath></defs></svg>
+<span class="truncate">Continue with Google</span>
+</button>
+<button class="flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-[#3a3627] h-12 px-5 text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4637]">
+<svg class="h-6 w-6" fill="white" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12C0 17.204 3.438 21.57 8.207 23.09C8.805 23.2 9.023 22.822 9.023 22.5C9.023 22.206 9.012 21.29 9.008 20.21C5.534 20.932 4.846 18.662 4.846 18.662C4.305 17.31 3.548 16.948 3.548 16.948C2.468 16.208 3.636 16.22 3.636 16.22C4.823 16.304 5.438 17.43 5.438 17.43C6.51 19.264 8.28 18.736 8.974 18.432C9.08 17.652 9.394 17.132 9.73 16.84C7.098 16.536 4.352 15.52 4.352 11.082C4.352 9.782 4.82 8.728 5.566 7.91C5.454 7.604 5.092 6.552 5.682 5.044C5.682 5.044 6.72 4.71 8.98 6.134C9.972 5.86 11.022 5.726 12.066 5.72C13.11 5.726 14.16 5.86 15.152 6.134C17.41 4.71 18.448 5.044 18.448 5.044C19.042 6.552 18.68 7.604 18.566 7.91C19.314 8.728 19.78 9.782 19.78 11.082C19.78 15.532 17.03 16.532 14.39 16.832C14.81 17.206 15.14 18.006 15.14 19.168C15.14 20.828 15.126 22.14 15.126 22.5C15.126 22.824 15.344 23.208 15.947 23.088C20.562 21.568 24 17.204 24 12C24 5.373 18.627 0 12 0Z"></path></svg>
+<span class="truncate">Continue with Github</span>
+</button>
+</div>
+<div class="my-6 flex items-center">
+<hr class="flex-grow border-t border-[#3a3627]"/>
+<p class="mx-4 text-sm text-[#bbb49b]">Or log in with your email</p>
+<hr class="flex-grow border-t border-[#3a3627]"/>
+</div>
+<form class="space-y-4">
+<div>
+<label class="text-white text-base font-medium leading-normal pb-2 block" for="email">Email</label>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border border-[#55503a] bg-[#27251b] focus:border-primary h-14 placeholder:text-[#bbb49b] p-[15px] text-base font-normal leading-normal" id="email" placeholder="Enter your email" required="" type="email"/>
+</div>
+<div>
+<label class="text-white text-base font-medium leading-normal pb-2 block" for="password">Password
+<div class="relative flex items-center">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border border-[#55503a] bg-[#27251b] focus:border-primary h-14 placeholder:text-[#bbb49b] p-[15px] text-base font-normal leading-normal" id="password" placeholder="Enter your password" required="" type="password"/>
+<button class="absolute right-3 text-[#bbb49b] hover:text-white" type="button">
+<span class="material-symbols-outlined">visibility_off</span>
+</button>
+</div>
+</label></div>
+<button class="flex w-full min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-background-dark text-base font-bold leading-normal tracking-[0.015em] hover:bg-yellow-400" type="submit">
+<span class="truncate">Log in</span>
+</button>
+</form>
+<div class="my-6 flex items-center">
+<hr class="flex-grow border-t border-[#3a3627]"/>
+<p class="mx-4 text-sm text-[#bbb49b]">Advanced login options</p>
+<hr class="flex-grow border-t border-[#3a3627]"/>
+</div>
+<div class="flex flex-col gap-3">
+<button class="flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-[#3a3627] h-12 px-5 text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4637]">
+<span class="material-symbols-outlined">fingerprint</span>
+<span class="truncate">Continue with Passkey</span>
+</button>
+<button class="flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-[#3a3627] h-12 px-5 text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4637]">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="truncate">Continue with Wallet</span>
+</button>
+</div>
+<div class="mt-6 text-center">
+<a class="text-sm text-primary hover:underline" href="#">Issue with login?</a>
+</div>
+<div class="mt-8 text-center text-xs text-[#bbb49b]">
+<p>By continuing, you agree to our <a class="underline hover:text-white" href="#">Terms of Service</a> and <a class="underline hover:text-white" href="#">Privacy Policy</a>.</p>
+</div>
+</div>
+</div>
+</body></html>
